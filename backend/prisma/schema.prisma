@@ -1,0 +1,324 @@
+// This is your Prisma schema file for i9 CRM
+// Documentação: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+  binaryTargets   = ["native", "windows"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// =====================
+// USUÁRIOS E AUTENTICAÇÃO
+// =====================
+
+model User {
+  id              String           @id @default(cuid())
+  name            String
+  email           String           @unique
+  passwordHash    String
+  role            Role             @default(AGENT)
+  createdAt       DateTime         @default(now())
+  leads           Lead[]
+  campaigns       Campaign[]
+  twoFactorSecret TwoFactorSecret?
+}
+
+enum Role {
+  ADMIN
+  AGENT
+}
+
+// =====================
+// LEADS
+// =====================
+
+model Lead {
+  id              String         @id @default(cuid())
+  externalId      String?        @unique // ID da linha no Google Sheets: "sheet_row_{rowIndex}"
+  name            String
+  businessName    String
+  niche           String
+  neighborhood    String
+  address         String?
+  phone           String?
+  whatsapp        String?
+  email           String?
+  website         String?
+  instagram       String?
+  googleRating    Float?
+  reviewCount     Int?
+  digitalLevel    DigitalLevel   @default(LOW)
+  painPoints      String?
+  idealService    String?
+  upsellService   String?
+  urgency         Int            @default(5)
+  revenuePotential String?
+  closingEase     String?
+  score           Int            @default(0)
+  classification  Classification @default(COLD)
+  whatsappAngle   String?
+  status          LeadStatus     @default(NEW)
+  pipelineStage   String         @default("new")
+  notes           String?
+  lastContactAt   DateTime?
+  nextFollowUpAt  DateTime?
+  importedAt      DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  assignedTo      User?          @relation(fields: [assignedToId], references: [id])
+  assignedToId    String?
+  interactions    Interaction[]
+  campaignLeads   CampaignLead[]
+  trackingEvents  TrackingEvent[]
+  leadCadences       LeadCadence[]
+  opportunityAlerts  OpportunityAlert[]
+}
+
+enum DigitalLevel {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Classification {
+  HOT
+  WARM
+  COLD
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  REPLIED
+  PROPOSAL
+  NEGOTIATION
+  CLOSED
+  LOST
+}
+
+// =====================
+// INTERAÇÕES
+// =====================
+
+model Interaction {
+  id        String          @id @default(cuid())
+  lead      Lead            @relation(fields: [leadId], references: [id])
+  leadId    String
+  type      InteractionType
+  channel   String
+  content   String
+  direction String          @default("OUT") // IN | OUT
+  createdAt DateTime        @default(now())
+}
+
+enum InteractionType {
+  WHATSAPP
+  EMAIL
+  CALL
+  NOTE
+}
+
+// =====================
+// CAMPANHAS
+// =====================
+
+model Campaign {
+  id            String         @id @default(cuid())
+  name          String
+  description   String?
+  type          CampaignType
+  status        CampaignStatus @default(DRAFT)
+  subject       String?        // assunto do email
+  bodyText      String         // template WhatsApp ou corpo do email (texto puro)
+  bodyHtml      String?        // corpo do email em HTML
+  scheduledAt   DateTime?
+  sentAt        DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  createdBy     User           @relation(fields: [createdById], references: [id])
+  createdById   String
+  campaignLeads CampaignLead[]
+}
+
+enum CampaignType {
+  WHATSAPP
+  EMAIL
+  BOTH
+}
+
+enum CampaignStatus {
+  DRAFT
+  SCHEDULED
+  RUNNING
+  PAUSED
+  COMPLETED
+}
+
+// =====================
+// LEADS DE CAMPANHAS (pivot)
+// =====================
+
+model CampaignLead {
+  id             String     @id @default(cuid())
+  campaign       Campaign   @relation(fields: [campaignId], references: [id])
+  campaignId     String
+  lead           Lead       @relation(fields: [leadId], references: [id])
+  leadId         String
+  status         SendStatus @default(PENDING)
+  sentAt         DateTime?
+  deliveredAt    DateTime?
+  openedAt       DateTime?
+  clickedAt      DateTime?
+  replied        Boolean    @default(false)
+  repliedAt      DateTime?
+  errorMsg       String?
+  trackingToken  String     @unique @default(cuid())
+
+  @@unique([campaignId, leadId])
+}
+
+enum SendStatus {
+  PENDING
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  REPLIED
+  FAILED
+}
+
+// =====================
+// EVENTOS DE TRACKING
+// =====================
+
+model TrackingEvent {
+  id        String   @id @default(cuid())
+  lead      Lead     @relation(fields: [leadId], references: [id])
+  leadId    String
+  token     String
+  type      String   // open | click | reply
+  url       String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+}
+
+// =====================
+// HISTÓRICO DE SYNC DO SHEETS
+// =====================
+
+model SheetSync {
+  id           String   @id @default(cuid())
+  syncedAt     DateTime @default(now())
+  rowsImported Int
+  rowsUpdated  Int
+  status       String   // success | error | partial
+  errorMsg     String?
+}
+
+// =====================
+// ALERTAS DE OPORTUNIDADE
+// =====================
+
+model OpportunityAlert {
+  id          String   @id @default(cuid())
+  lead        Lead     @relation(fields: [leadId], references: [id])
+  leadId      String
+  type        String   // hot_engagement | cooling_lead | no_contact_week
+  title       String
+  description String
+  urgency     Int      @default(5)
+  isRead      Boolean  @default(false)
+  isDismissed Boolean  @default(false)
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([isRead, isDismissed, createdAt])
+}
+
+// =====================
+// CADÊNCIA DE FOLLOW-UP
+// =====================
+
+model FollowUpSequence {
+  id           String        @id @default(cuid())
+  name         String
+  description  String?
+  steps        Json          // FollowUpStep[]
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  leadCadences LeadCadence[]
+}
+
+model LeadCadence {
+  id           String           @id @default(cuid())
+  lead         Lead             @relation(fields: [leadId], references: [id])
+  leadId       String
+  sequence     FollowUpSequence @relation(fields: [sequenceId], references: [id])
+  sequenceId   String
+  currentStep  Int              @default(0)
+  status       String           @default("active") // active | paused | completed | cancelled
+  startedAt    DateTime         @default(now())
+  nextActionAt DateTime?
+  pausedAt     DateTime?
+  pauseReason  String?
+  completedAt  DateTime?
+  updatedAt    DateTime         @updatedAt
+
+  @@unique([leadId, sequenceId])
+}
+
+// =====================
+// BACKUP
+// =====================
+
+model BackupLog {
+  id          String   @id @default(cuid())
+  filename    String
+  sizeKb      Int
+  driveFileId String?
+  status      String   @default("success") // success | error
+  errorMsg    String?
+  triggeredBy String   @default("auto")    // "auto" ou userId
+  createdAt   DateTime @default(now())
+}
+
+// =====================
+// 2FA
+// =====================
+
+model TwoFactorSecret {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secret    String
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
+// =====================
+// AUDIT LOG
+// =====================
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  userEmail String?
+  action    String
+  entity    String
+  entityId  String?
+  before    Json?
+  after     Json?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([entity, entityId])
+  @@index([createdAt])
+}
