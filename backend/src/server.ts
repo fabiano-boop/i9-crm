@@ -8,10 +8,7 @@ import { env } from './config/env.js'
 import { logger } from './utils/logger.js'
 import { prisma } from './config/database.js'
 import apiRouter from './routes/index.js'
-import { scheduleDailySync, startSheetsWorker } from './jobs/sheetsSync.job.js'
-import { scheduleBackupJob, startBackupWorker } from './jobs/backup.job.js'
-import { scheduleCadenceJob, startCadenceWorker } from './jobs/cadence.job.js'
-import { scheduleAlertJobs, startAlertWorkers } from './jobs/alerts.job.js'
+import { startAllWorkers, scheduleAllJobs } from './jobs/index.js'
 import { initWebSocket } from './services/websocket.service.js'
 
 const app = express()
@@ -29,11 +26,14 @@ app.get('/api/health', healthHandler)
 // Middlewares globais
 app.use(helmet())
 const allowedOrigins = env.FRONTEND_URL.split(',').map((u) => u.trim()).filter(Boolean)
+// Padrão de preview do Vercel para o projeto i9-crm-frontend
+const vercelPreviewPattern = /^https:\/\/i9-crm-frontend-[a-z0-9]+-i9-solucoes-digitais\.vercel\.app$/
 app.use(cors({
   origin: (origin, cb) => {
     // Allow requests with no origin (e.g. mobile apps, curl, Postman)
     if (!origin) return cb(null, true)
     if (allowedOrigins.includes(origin)) return cb(null, true)
+    if (vercelPreviewPattern.test(origin)) return cb(null, true)
     cb(new Error(`CORS: origin not allowed — ${origin}`))
   },
   credentials: true,
@@ -72,14 +72,8 @@ httpServer.listen(PORT, () => {
   logger.info(`Ambiente: ${env.NODE_ENV}`)
 
   // Inicia workers e agendamentos (falham silenciosamente sem Redis)
-  startSheetsWorker()
-  scheduleDailySync()
-  startBackupWorker()
-  scheduleBackupJob()
-  startCadenceWorker()
-  scheduleCadenceJob()
-  startAlertWorkers().catch((err) => logger.warn({ err }, 'Alert workers start falhou'))
-  scheduleAlertJobs().catch((err) => logger.warn({ err }, 'Alert jobs schedule falhou'))
+  startAllWorkers().catch((err) => logger.warn({ err }, 'startAllWorkers falhou'))
+  scheduleAllJobs().catch((err) => logger.warn({ err }, 'scheduleAllJobs falhou'))
 })
 
 export { app, httpServer }

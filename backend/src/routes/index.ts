@@ -10,6 +10,10 @@ import alertsRouter from './alerts.js'
 import webhooksRouter from './webhooks.js'
 import agentRouter from './agent.js'
 import setupRouter from './setup.js'
+import clientsRouter from './clients.js'
+import reportsRouter from './reports.js'
+import analyticsRouter from './analytics.js'
+import whatsappRouter from './whatsapp.js'
 
 const router = Router()
 
@@ -24,5 +28,9 @@ router.use('/alerts', alertsRouter)
 router.use('/webhooks', webhooksRouter) // Evolution API webhooks (sem JWT)
 router.use('/agent', agentRouter)       // Gerenciamento do agente Maya
 router.use('/setup', setupRouter)       // TEMPORÁRIO — remover após setup inicial
+router.use('/clients', clientsRouter)   // Clientes ativos + relatórios semanais
+router.use('/reports', reportsRouter)   // Ações diretas sobre relatórios
+router.use('/analytics', analyticsRouter) // Dashboard de métricas
+router.use('/whatsapp', whatsappRouter)   // Status da conexão WhatsApp
 
 export default router

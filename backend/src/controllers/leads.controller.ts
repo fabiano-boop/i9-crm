@@ -287,8 +287,21 @@ export async function rescoreLead(req: Request, res: Response): Promise<void> {
     res.status(503).json({ error: 'ANTHROPIC_API_KEY não configurado', code: 'AI_NOT_CONFIGURED' })
     return
   }
-  const result = await scoreLead((req.params['id'] as string))
-  res.json(result)
+  try {
+    const result = await scoreLead((req.params['id'] as string))
+    res.json(result)
+  } catch (err: unknown) {
+    const e = err as { status?: number; message?: string }
+    if (e?.status === 401) {
+      res.status(503).json({ error: 'ANTHROPIC_API_KEY inválida — atualize no Railway', code: 'AI_AUTH_ERROR' })
+      return
+    }
+    if (e?.status === 429) {
+      res.status(503).json({ error: 'Rate limit da API Anthropic atingido', code: 'AI_RATE_LIMIT' })
+      return
+    }
+    throw err // deixa o asyncHandler tratar os demais erros
+  }
 }
 
 // POST /api/leads/bulk-score
