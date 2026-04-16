@@ -1,6 +1,10 @@
 import axios from 'axios'
 
-const BASE_URL = (import.meta.env.VITE_API_URL as string | undefined) || '/api'
+// Em produção (build Vite), aponta direto para o backend no Railway.
+// Em dev local, usa proxy relativo /api (configurado no vite.config.ts).
+const BASE_URL = import.meta.env.PROD
+  ? 'https://i9-crm-production.up.railway.app/api'
+  : ((import.meta.env.VITE_API_URL as string | undefined) ?? '/api')
 
 export const api = axios.create({
   baseURL: BASE_URL,
