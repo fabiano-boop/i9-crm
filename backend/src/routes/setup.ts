@@ -76,4 +76,33 @@ router.get('/create-admin', async (req: Request, res: Response): Promise<void> =
   }
 })
 
+// Debug completo: CORS, DB, admin — sem secret para acesso rápido
+router.get('/login-debug', async (_req: Request, res: Response): Promise<void> => {
+  let dbConnected = false
+  let adminExists = false
+  let adminHash = ''
+  let adminPasswordMatch = false
+
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    dbConnected = true
+
+    const user = await prisma.user.findUnique({ where: { email: ADMIN_EMAIL } })
+    if (user) {
+      adminExists = true
+      adminHash = user.passwordHash.substring(0, 20)
+      adminPasswordMatch = await bcrypt.compare(ADMIN_PASS, user.passwordHash)
+    }
+  } catch (_err) { /* silencioso */ }
+
+  res.json({
+    corsOrigins:         process.env.FRONTEND_URL ?? '(não definido)',
+    nodeEnv:             process.env.NODE_ENV,
+    dbConnected,
+    adminExists,
+    adminHash,
+    adminPasswordMatch,
+  })
+})
+
 export default router
