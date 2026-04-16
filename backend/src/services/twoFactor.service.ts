@@ -41,8 +41,14 @@ export async function verifyToken(userId: string, token: string): Promise<boolea
 }
 
 export async function isEnabled(userId: string): Promise<boolean> {
-  const record = await prisma.twoFactorSecret.findUnique({ where: { userId } })
-  return record?.verified === true
+  try {
+    const record = await prisma.twoFactorSecret.findUnique({ where: { userId } })
+    return record?.verified === true
+  } catch (err) {
+    // Se a tabela ainda não foi migrada em produção, trata como 2FA desativado
+    logger.warn({ userId, err }, '2FA isEnabled falhou — tabela ausente ou erro de DB; assumindo desativado')
+    return false
+  }
 }
 
 export async function disable(userId: string): Promise<void> {

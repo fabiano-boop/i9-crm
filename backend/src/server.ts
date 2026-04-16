@@ -15,21 +15,34 @@ import { scheduleAlertJobs, startAlertWorkers } from './jobs/alerts.job.js'
 import { initWebSocket } from './services/websocket.service.js'
 
 const app = express()
+app.set('trust proxy', 1)
 const httpServer = createServer(app)
+
+// Health check — antes de qualquer middleware para garantir acesso irrestrito
+// (probes do Railway enviam Origin do próprio domínio que não está na allowlist)
+const healthHandler = (_req: express.Request, res: express.Response) => {
+  res.json({ status: 'ok', timestamp: new Date().toISOString(), env: env.NODE_ENV })
+}
+app.get('/health', healthHandler)
+app.get('/api/health', healthHandler)
 
 // Middlewares globais
 app.use(helmet())
-app.use(cors({ origin: env.FRONTEND_URL, credentials: true }))
+const allowedOrigins = env.FRONTEND_URL.split(',').map((u) => u.trim()).filter(Boolean)
+app.use(cors({
+  origin: (origin, cb) => {
+    // Allow requests with no origin (e.g. mobile apps, curl, Postman)
+    if (!origin) return cb(null, true)
+    if (allowedOrigins.includes(origin)) return cb(null, true)
+    cb(new Error(`CORS: origin not allowed — ${origin}`))
+  },
+  credentials: true,
+}))
 app.use(express.json({ limit: '10mb' }))
 app.use(express.urlencoded({ extended: true }))
 
 // Rate limiting global (100 req/min por IP)
 app.use(rateLimit({ windowMs: 60_000, max: 100, standardHeaders: true, legacyHeaders: false }))
-
-// Health check
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString(), env: env.NODE_ENV })
-})
 
 // Rotas da API
 app.use('/api', apiRouter)
@@ -52,8 +65,10 @@ process.on('SIGTERM', shutdown)
 // Inicializa WebSocket no mesmo servidor HTTP
 initWebSocket(httpServer)
 
-httpServer.listen(env.PORT, () => {
-  logger.info(`i9 CRM backend rodando na porta ${env.PORT}`)
+const PORT = Number(process.env.PORT) || 3000
+
+httpServer.listen(PORT, () => {
+  logger.info(`i9 CRM backend rodando na porta ${PORT}`)
   logger.info(`Ambiente: ${env.NODE_ENV}`)
 
   // Inicia workers e agendamentos (falham silenciosamente sem Redis)

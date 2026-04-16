@@ -25,7 +25,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(3000),
   TRACKING_PORT: z.coerce.number().default(3001),
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
-  FRONTEND_URL: z.string().default('http://localhost:5173'),
+  FRONTEND_URL: z.string().default('http://localhost:5173,http://localhost:5174'),
   LOG_LEVEL: z.string().default('info'),
   WHATSAPP_AGENT_ENABLED: z.coerce.boolean().default(false),
 })

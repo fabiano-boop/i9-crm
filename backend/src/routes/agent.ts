@@ -94,7 +94,7 @@ router.get('/conversations', asyncHandler(async (_req: Request, res: Response): 
 // ─── PUT /api/agent/handoff/:leadId/takeover ──────────────────────────────────
 
 router.put('/handoff/:leadId/takeover', asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { leadId } = req.params
+  const leadId = req.params.leadId as string
 
   const lead = await prisma.lead.findUnique({ where: { id: leadId } })
   if (!lead) {
@@ -153,7 +153,7 @@ router.get('/analytics', asyncHandler(async (_req: Request, res: Response): Prom
 // ─── GET /api/agent/lead/:leadId/managed ──────────────────────────────────────
 
 router.get('/lead/:leadId/managed', asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const { leadId } = req.params
+  const leadId = req.params.leadId as string
   res.json({
     leadId,
     isAgentManaged: isAgentManaged(leadId),

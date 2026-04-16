@@ -9,6 +9,7 @@ import cadencesRouter from './cadences.js'
 import alertsRouter from './alerts.js'
 import webhooksRouter from './webhooks.js'
 import agentRouter from './agent.js'
+import setupRouter from './setup.js'
 
 const router = Router()
 
@@ -22,5 +23,6 @@ router.use('/cadences', cadencesRouter)
 router.use('/alerts', alertsRouter)
 router.use('/webhooks', webhooksRouter) // Evolution API webhooks (sem JWT)
 router.use('/agent', agentRouter)       // Gerenciamento do agente Maya
+router.use('/setup', setupRouter)       // TEMPORÁRIO — remover após setup inicial
 
 export default router
