@@ -42,6 +42,7 @@ interface ParsedLead {
   score: number
   classification: Classification
   whatsappAngle: string
+  source: string
   status: LeadStatus
   notes: string
   dataHash: string
@@ -51,7 +52,29 @@ function getSheets(): sheets_v4.Sheets {
   if (!env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON não configurado')
   }
-  const credentials = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON)
+
+  let credentials: Record<string, unknown>
+  try {
+    credentials = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_JSON)
+  } catch {
+    throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON inválido — JSON malformado. Verifique se não há quebras de linha.')
+  }
+
+  // Detecta credencial de aplicação web (type != service_account) — erro comum
+  if (credentials.type !== 'service_account') {
+    const got = credentials.type ?? (credentials.web ? 'web (OAuth client)' : 'desconhecido')
+    throw new Error(
+      `GOOGLE_SERVICE_ACCOUNT_JSON inválido — tipo "${got}". ` +
+      `Precisa ser uma Service Account JSON (type: "service_account"). ` +
+      `Acesse Google Cloud Console → IAM → Contas de serviço → Criar chave JSON.`,
+    )
+  }
+
+  // Corrige \n escapados no private_key (problema comum ao colar JSON em env vars)
+  if (typeof credentials.private_key === 'string') {
+    credentials = { ...credentials, private_key: credentials.private_key.replace(/\\n/g, '\n') }
+  }
+
   const auth = new google.auth.GoogleAuth({
     credentials,
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
@@ -115,6 +138,7 @@ function parseRow(row: SheetRow): ParsedLead | null {
     classification: normalizeClassification(raw[18]),
     whatsappAngle: raw[19] ?? '',
     status: normalizeStatus(raw[20]),
+    source: raw[21] ?? '',       // coluna V = responsavel/origem (ex: Instagram, Google)
     notes: raw[22] ?? '',
     businessName: raw[23] ?? raw[1] ?? '', // coluna X ou fallback para nome
   }

@@ -63,6 +63,7 @@ model Lead {
   score           Int            @default(0)
   classification  Classification @default(COLD)
   whatsappAngle   String?
+  source          String?        // origem: Instagram | Google | Indicação | etc.
   status          LeadStatus     @default(NEW)
   pipelineStage   String         @default("new")
   notes           String?
