@@ -52,7 +52,7 @@ export default function Dashboard() {
   const coldLeads = totalLeads - totalHot - totalWarm
 
   return (
-    <div className="p-6">
+    <div className="p-6" style={{ background: '#061422', minHeight: '100%' }}>
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>
