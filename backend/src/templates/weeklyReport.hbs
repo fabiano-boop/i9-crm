@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Relatório Semanal — {{businessName}}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f6fa;
+      color: #1a1a2e;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .page {
+      max-width: 800px;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: linear-gradient(135deg, #1D9E75 0%, #15755a 100%);
+      padding: 36px 40px 28px;
+      color: #fff;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+
+    .header-logo {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -1px;
+    }
+
+    .header-logo span {
+      font-weight: 300;
+      font-size: 14px;
+      display: block;
+      opacity: .85;
+      margin-top: 2px;
+    }
+
+    .header-info {
+      text-align: right;
+    }
+
+    .header-info .client-name {
+      font-size: 20px;
+      font-weight: 700;
+    }
+
+    .header-info .period {
+      font-size: 13px;
+      opacity: .85;
+      margin-top: 4px;
+    }
+
+    .header-info .badge {
+      display: inline-block;
+      background: rgba(255,255,255,.2);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    /* ── SECTION TITLE ── */
+    .section {
+      padding: 32px 40px;
+      border-bottom: 1px solid #f0f0f5;
+    }
+
+    .section:last-child {
+      border-bottom: none;
+    }
+
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #1D9E75;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 2px;
+      background: #f0f0f5;
+    }
+
+    /* ── KPI CARDS ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .kpi-card {
+      background: #f8fafc;
+      border-radius: 12px;
+      padding: 20px 16px;
+      text-align: center;
+      border: 1.5px solid #e8edf2;
+    }
+
+    .kpi-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: #1D9E75;
+      line-height: 1;
+    }
+
+    .kpi-label {
+      font-size: 12px;
+      color: #7a8ba0;
+      margin-top: 6px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .kpi-sub {
+      font-size: 11px;
+      color: #aab5c0;
+      margin-top: 4px;
+    }
+
+    /* ── BAR CHART ── */
+    .bar-chart {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .bar-label {
+      width: 160px;
+      font-size: 13px;
+      color: #4a5568;
+      flex-shrink: 0;
+    }
+
+    .bar-track {
+      flex: 1;
+      background: #f0f0f5;
+      border-radius: 6px;
+      height: 16px;
+      overflow: hidden;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      background: linear-gradient(90deg, #1D9E75, #2fc98e);
+      transition: width .3s ease;
+    }
+
+    .bar-value {
+      width: 40px;
+      text-align: right;
+      font-size: 13px;
+      font-weight: 700;
+      color: #1a1a2e;
+    }
+
+    /* ── TEXT LISTS ── */
+    .bullet-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .bullet-list li {
+      display: flex;
+      gap: 10px;
+      padding: 12px 16px;
+      background: #f8fafc;
+      border-radius: 8px;
+      border-left: 3px solid #1D9E75;
+      font-size: 13.5px;
+      color: #2d3748;
+      line-height: 1.5;
+    }
+
+    .bullet-list li::before {
+      content: '✓';
+      color: #1D9E75;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    /* ── RECOMMENDATIONS ── */
+    .rec-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      counter-reset: rec-counter;
+    }
+
+    .rec-list li {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      counter-increment: rec-counter;
+    }
+
+    .rec-number {
+      background: #1D9E75;
+      color: #fff;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .rec-text {
+      font-size: 13.5px;
+      color: #2d3748;
+      line-height: 1.55;
+      padding-top: 4px;
+    }
+
+    /* ── NEXT STEPS ── */
+    .next-steps {
+      background: linear-gradient(135deg, #f0faf6 0%, #e8f7ef 100%);
+      border-radius: 12px;
+      padding: 24px;
+      border: 1px solid #b8e8d4;
+    }
+
+    .next-steps p {
+      font-size: 13.5px;
+      color: #2d3748;
+      line-height: 1.6;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: #1a1a2e;
+      padding: 28px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-brand {
+      color: #fff;
+    }
+
+    .footer-brand .name {
+      font-size: 16px;
+      font-weight: 700;
+      color: #1D9E75;
+    }
+
+    .footer-brand .tagline {
+      font-size: 11px;
+      color: #7a8ba0;
+      margin-top: 2px;
+    }
+
+    .footer-cta {
+      background: #1D9E75;
+      color: #fff;
+      padding: 10px 22px;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    @media print {
+      body { background: #fff; }
+      .page { box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+
+    <!-- HEADER -->
+    <div class="header">
+      <div class="header-logo">
+        i9
+        <span>Soluções Digitais</span>
+      </div>
+      <div class="header-info">
+        <div class="client-name">{{businessName}}</div>
+        <div class="period">{{weekStart}} — {{weekEnd}}</div>
+        <div class="badge">📊 Relatório Semanal</div>
+      </div>
+    </div>
+
+    <!-- KPIs PRINCIPAIS -->
+    <div class="section">
+      <div class="section-title">Resumo Executivo</div>
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-value">{{messagesSent}}</div>
+          <div class="kpi-label">Mensagens Enviadas</div>
+          <div class="kpi-sub">via WhatsApp</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">{{readRate}}%</div>
+          <div class="kpi-label">Taxa de Leitura</div>
+          <div class="kpi-sub">{{messagesRead}} lidas</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-value">{{repliesReceived}}</div>
+          <div class="kpi-label">Respostas Recebidas</div>
+          <div class="kpi-sub">engajamento real</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DESEMPENHO DA SEMANA -->
+    <div class="section">
+      <div class="section-title">Desempenho da Semana</div>
+      <div class="bar-chart">
+        <div class="bar-row">
+          <div class="bar-label">Mensagens Enviadas</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: {{barMessagesSent}}%"></div>
+          </div>
+          <div class="bar-value">{{messagesSent}}</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Mensagens Lidas</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: {{barMessagesRead}}%"></div>
+          </div>
+          <div class="bar-value">{{messagesRead}}</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Respostas</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: {{barReplies}}%"></div>
+          </div>
+          <div class="bar-value">{{repliesReceived}}</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Novos Leads</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: {{barNewLeads}}%"></div>
+          </div>
+          <div class="bar-value">{{newLeadsGen}}</div>
+        </div>
+        <div class="bar-row">
+          <div class="bar-label">Agendamentos</div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width: {{barAppointments}}%"></div>
+          </div>
+          <div class="bar-value">{{appointmentsSet}}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DESTAQUES -->
+    {{#if highlights}}
+    <div class="section">
+      <div class="section-title">Destaques da Semana</div>
+      <ul class="bullet-list">
+        {{#each highlightItems}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+    {{/if}}
+
+    <!-- RECOMENDAÇÕES -->
+    {{#if recommendations}}
+    <div class="section">
+      <div class="section-title">Recomendações para a Próxima Semana</div>
+      <ol class="rec-list">
+        {{#each recommendationItems}}
+        <li>
+          <div class="rec-number">{{@index_plus_1}}</div>
+          <div class="rec-text">{{this}}</div>
+        </li>
+        {{/each}}
+      </ol>
+    </div>
+    {{/if}}
+
+    <!-- PRÓXIMOS PASSOS -->
+    <div class="section">
+      <div class="section-title">Próximos Passos — i9 Soluções</div>
+      <div class="next-steps">
+        <p>{{nextWeekPlan}}</p>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="footer">
+      <div class="footer-brand">
+        <div class="name">i9 Soluções Digitais</div>
+        <div class="tagline">Zona Leste de São Paulo · crm@i9solucoes.com.br</div>
+      </div>
+      <a class="footer-cta" href="https://wa.me/5511999999999">
+        💬 Falar com Consultor
+      </a>
+    </div>
+
+  </div>
+</body>
+</html>

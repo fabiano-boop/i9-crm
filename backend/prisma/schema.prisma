@@ -66,11 +66,13 @@ model Lead {
   source          String?        // origem: Instagram | Google | Indicação | etc.
   status          LeadStatus     @default(NEW)
   pipelineStage   String         @default("new")
-  notes           String?
-  lastContactAt   DateTime?
-  nextFollowUpAt  DateTime?
-  importedAt      DateTime       @default(now())
-  updatedAt       DateTime       @updatedAt
+  notes               String?
+  lastContactAt       DateTime?
+  nextFollowUpAt      DateTime?
+  recommendedPackage  String?    // basico | pro | premium — enriched from marketIntelligence
+  conversionPotential Int?       // 0-100 — segment conversion potential from marketIntelligence
+  importedAt          DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
   assignedTo      User?          @relation(fields: [assignedToId], references: [id])
   assignedToId    String?
   interactions    Interaction[]
@@ -322,4 +324,68 @@ model AuditLog {
   @@index([userId])
   @@index([entity, entityId])
   @@index([createdAt])
+}
+
+// =====================
+// CLIENTES ATIVOS (pós-venda)
+// =====================
+
+model Client {
+  id            String         @id @default(cuid())
+  businessName  String
+  ownerName     String
+  email         String?
+  whatsapp      String?
+  address       String?
+  neighborhood  String?
+  niche         String?
+  package       String?        // basico | pro | premium
+  monthlyValue  Float?
+  startDate     DateTime       @default(now())
+  status        String         @default("active") // active | paused | churned
+  origin              String         @default("lead")   // lead | referral | manual
+  leadId              String?
+  notes               String?
+  cancelledAt         DateTime?
+  cancellationReason  String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+  weeklyReports WeeklyReport[]
+
+  @@index([status])
+}
+
+// =====================
+// RELATÓRIOS SEMANAIS
+// =====================
+
+model WeeklyReport {
+  id              String   @id @default(cuid())
+  client          Client   @relation(fields: [clientId], references: [id])
+  clientId        String
+  weekStart       DateTime
+  weekEnd         DateTime
+
+  // Métricas da semana
+  messagesSent    Int      @default(0)
+  messagesRead    Int      @default(0)
+  repliesReceived Int      @default(0)
+  newLeadsGen     Int      @default(0)
+  appointmentsSet Int      @default(0)
+  conversionRate  Float    @default(0)
+
+  // Conteúdo gerado por Claude
+  highlights      String?
+  recommendations String?
+  nextWeekPlan    String?
+
+  // Entrega
+  pdfPath         String?
+  sentViaEmail    Boolean  @default(false)
+  sentViaWhatsApp Boolean  @default(false)
+  sentAt          DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([clientId, weekStart])
 }

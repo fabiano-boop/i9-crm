@@ -83,14 +83,29 @@ function AppLayoutInner() {
   useNotifications(token)
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
+    <div
+      className="flex h-screen overflow-hidden"
+      style={{ background: '#061422' }}
+    >
       <Sidebar />
+
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
-        <header className="h-12 bg-white border-b border-gray-200 flex items-center justify-end px-4 shrink-0">
+        <header
+          className="h-12 flex items-center justify-end px-4 shrink-0"
+          style={{
+            background:   '#0A1E30',
+            borderBottom: '1px solid rgba(0,200,232,0.12)',
+          }}
+        >
           <AlertsBadge token={token} />
         </header>
-        <main className="flex-1 overflow-y-auto">
+
+        {/* Conteúdo */}
+        <main
+          className="flex-1 overflow-y-auto"
+          style={{ background: '#061422' }}
+        >
           <Outlet />
         </main>
       </div>

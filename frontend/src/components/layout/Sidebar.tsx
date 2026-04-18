@@ -1,19 +1,39 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
 import { useAuthStore } from '../../stores/authStore'
 import { duplicatesApi, agentApi } from '../../services/api'
+import {
+  LayoutDashboard,
+  Users,
+  Copy,
+  GitBranch,
+  Megaphone,
+  Bot,
+  BarChart2,
+  Settings,
+  Briefcase,
+  List,
+  UserPlus,
+  Globe,
+  LogOut,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
 
 export default function Sidebar() {
   const { user, logout } = useAuthStore()
+  const location = useLocation()
   const [dupCount, setDupCount]         = useState(0)
   const [handoffCount, setHandoffCount] = useState(0)
+  const [clientsOpen, setClientsOpen]   = useState(
+    () => location.pathname.startsWith('/clients') || location.pathname === '/market-intelligence'
+  )
 
   useEffect(() => {
     duplicatesApi.list()
       .then(({ data }) => setDupCount(data.total))
       .catch(() => null)
 
-    // Verifica fila de handoff do agente a cada 30s
     const checkHandoff = () => {
       agentApi.status()
         .then(({ data }) => setHandoffCount(data.handoffQueue.length))
@@ -24,75 +44,189 @@ export default function Sidebar() {
     return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    if (location.pathname.startsWith('/clients') || location.pathname === '/market-intelligence') {
+      setClientsOpen(true)
+    }
+  }, [location.pathname])
+
   const navItems = [
-    { to: '/dashboard',         label: 'Dashboard',     icon: '📊' },
-    { to: '/leads',             label: 'Leads',         icon: '👥' },
-    { to: '/leads/duplicates',  label: 'Duplicatas',    icon: '🔁', badge: dupCount   || undefined },
-    { to: '/pipeline',          label: 'Pipeline',      icon: '🔄' },
-    { to: '/campaigns',         label: 'Campanhas',     icon: '📣' },
-    { to: '/agent',             label: 'Agente Maya',   icon: '🤖', badge: handoffCount || undefined, badgeColor: 'bg-red-500' },
-    { to: '/analytics',         label: 'Analytics',     icon: '📈' },
-    { to: '/settings',          label: 'Configurações', icon: '⚙️' },
+    { to: '/dashboard',        label: 'Dashboard',     Icon: LayoutDashboard },
+    { to: '/leads',            label: 'Leads',         Icon: Users },
+    { to: '/leads/duplicates', label: 'Duplicatas',    Icon: Copy,       badge: dupCount      || undefined },
+    { to: '/pipeline',         label: 'Pipeline',      Icon: GitBranch },
+    { to: '/campaigns',        label: 'Campanhas',     Icon: Megaphone },
+    { to: '/agent',            label: 'Agente Maya',   Icon: Bot,        badge: handoffCount  || undefined, badgeRed: true },
+    { to: '/analytics',        label: 'Analytics',     Icon: BarChart2 },
+    { to: '/settings',         label: 'Configurações', Icon: Settings },
   ]
 
   return (
-    <aside className="w-60 min-h-screen bg-gray-900 flex flex-col">
-      {/* Logo */}
-      <div className="px-6 py-5 border-b border-gray-700">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center">
-            <span className="text-white text-sm font-bold">i9</span>
-          </div>
-          <div>
-            <p className="text-white font-semibold text-sm">i9 CRM</p>
-            <p className="text-gray-400 text-xs">Zona Leste SP</p>
-          </div>
-        </div>
+    <aside
+      className="w-60 min-h-screen flex flex-col"
+      style={{ background: '#0A1E30', borderRight: '1px solid rgba(0,200,232,0.12)' }}
+    >
+      {/* ── Logo ── */}
+      <div
+        className="px-5 py-4 flex items-center gap-3"
+        style={{ borderBottom: '1px solid rgba(0,200,232,0.12)' }}
+      >
+        <img
+          src="/logo_i9.png"
+          alt="i9 Soluções Digitais"
+          style={{
+            height: 36,
+            width: 'auto',
+            objectFit: 'contain',
+            filter: 'drop-shadow(0 0 6px rgba(0,200,232,0.3))',
+          }}
+        />
+        <span
+          className="text-xs uppercase tracking-widest"
+          style={{ color: '#7EAFC4', fontFamily: 'monospace' }}
+        >
+          CRM
+        </span>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {navItems.map((item) => (
+      {/* ── Nav ── */}
+      <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
+
+        {/* Grupo principal */}
+        <p
+          className="text-[9px] uppercase tracking-widest px-3 mb-2"
+          style={{ color: '#3E6A80', fontFamily: 'monospace', letterSpacing: '0.2em' }}
+        >
+          Principal
+        </p>
+
+        {navItems.map(({ to, label, Icon, badge, badgeRed }) => (
           <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/leads'}
-            className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-colors ${
-                isActive
-                  ? 'bg-blue-600 text-white font-medium'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-800'
-              }`
-            }
+            key={to}
+            to={to}
+            end={to === '/leads'}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all relative group"
+            style={({ isActive }) => ({
+              color:      isActive ? '#00C8E8' : '#7EAFC4',
+              background: isActive ? 'rgba(0,200,232,0.10)' : 'transparent',
+              borderLeft: isActive ? '2px solid #00C8E8' : '2px solid transparent',
+            })}
           >
-            <span>{item.icon}</span>
-            <span className="flex-1">{item.label}</span>
-            {'badge' in item && item.badge !== undefined && item.badge > 0 && (
-              <span className={`${('badgeColor' in item && item.badgeColor) ? item.badgeColor : 'bg-yellow-500'} text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full`}>
-                {item.badge}
+            <Icon size={15} strokeWidth={1.8} />
+            <span className="flex-1">{label}</span>
+            {badge !== undefined && badge > 0 && (
+              <span
+                className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                style={{
+                  background: badgeRed ? 'rgba(239,68,68,0.9)' : 'rgba(0,200,232,0.2)',
+                  color:      badgeRed ? '#fff'                 : '#00C8E8',
+                }}
+              >
+                {badge}
               </span>
             )}
           </NavLink>
         ))}
+
+        {/* ── Seção Clientes ── */}
+        <div className="pt-3">
+          <div style={{ borderTop: '1px solid rgba(0,200,232,0.08)', marginBottom: 6 }} />
+
+          <p
+            className="text-[9px] uppercase tracking-widest px-3 mb-2"
+            style={{ color: '#3E6A80', fontFamily: 'monospace', letterSpacing: '0.2em' }}
+          >
+            Clientes
+          </p>
+
+          <button
+            onClick={() => setClientsOpen(o => !o)}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all"
+            style={{ color: '#7EAFC4', background: 'transparent' }}
+          >
+            <Briefcase size={15} strokeWidth={1.8} />
+            <span className="flex-1 text-left">Clientes</span>
+            {clientsOpen
+              ? <ChevronDown size={13} style={{ color: '#3E6A80' }} />
+              : <ChevronRight size={13} style={{ color: '#3E6A80' }} />
+            }
+          </button>
+
+          {clientsOpen && (
+            <div className="mt-1 space-y-0.5">
+              <NavLink
+                to="/clients"
+                end
+                className="flex items-center gap-2 pl-9 pr-3 py-2 rounded-lg text-sm transition-all"
+                style={({ isActive }) => ({
+                  color:      isActive ? '#00E5C8' : '#7EAFC4',
+                  background: isActive ? 'rgba(0,229,200,0.08)' : 'transparent',
+                })}
+              >
+                <List size={13} strokeWidth={1.8} />
+                Lista de clientes
+              </NavLink>
+
+              <NavLink
+                to="/clients/new"
+                className="flex items-center gap-2 pl-9 pr-3 py-2 rounded-lg text-sm transition-all"
+                style={({ isActive }) => ({
+                  color:      isActive ? '#00E5C8' : '#7EAFC4',
+                  background: isActive ? 'rgba(0,229,200,0.08)' : 'transparent',
+                })}
+              >
+                <UserPlus size={13} strokeWidth={1.8} />
+                Novo cliente
+              </NavLink>
+
+              <NavLink
+                to="/market-intelligence"
+                className="flex items-center gap-2 pl-9 pr-3 py-2 rounded-lg text-sm transition-all"
+                style={({ isActive }) => ({
+                  color:      isActive ? '#00E5C8' : '#7EAFC4',
+                  background: isActive ? 'rgba(0,229,200,0.08)' : 'transparent',
+                })}
+              >
+                <Globe size={13} strokeWidth={1.8} />
+                Intel. de Mercado
+              </NavLink>
+            </div>
+          )}
+        </div>
       </nav>
 
-      {/* User */}
-      <div className="px-4 py-4 border-t border-gray-700">
+      {/* ── User / Logout ── */}
+      <div
+        className="px-4 py-4"
+        style={{ borderTop: '1px solid rgba(0,200,232,0.12)' }}
+      >
         <div className="flex items-center gap-3 mb-3">
-          <div className="w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center">
-            <span className="text-white text-xs font-bold">
+          <div
+            className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0"
+            style={{ background: 'linear-gradient(135deg, #00C8E8, #00E5C8)' }}
+          >
+            <span className="text-xs font-bold" style={{ color: '#061422' }}>
               {user?.name?.charAt(0).toUpperCase()}
             </span>
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-white text-xs font-medium truncate">{user?.name}</p>
-            <p className="text-gray-400 text-xs truncate">{user?.role}</p>
+            <p className="text-xs font-medium truncate" style={{ color: '#E8F4F8' }}>
+              {user?.name}
+            </p>
+            <p className="text-xs truncate" style={{ color: '#7EAFC4' }}>
+              {user?.role}
+            </p>
           </div>
         </div>
+
         <button
           onClick={logout}
-          className="w-full text-left text-xs text-gray-400 hover:text-red-400 transition-colors px-1"
+          className="w-full flex items-center gap-2 text-xs px-1 py-1 rounded transition-colors"
+          style={{ color: '#3E6A80' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#FF8080')}
+          onMouseLeave={e => (e.currentTarget.style.color = '#3E6A80')}
         >
+          <LogOut size={13} strokeWidth={1.8} />
           Sair
         </button>
       </div>

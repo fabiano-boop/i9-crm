@@ -82,6 +82,7 @@ export const leadsApi = {
     emailBody: string
     callScript: string
   }>(`/leads/${id}/generate-pitch`),
+  convert: (id: string) => api.post(`/leads/${id}/convert`),
 }
 
 // ===== CAMPAIGNS =====
@@ -317,6 +318,88 @@ export interface PaginatedResult<T> {
   }
 }
 
+// ─── Client types ────────────────────────────────────────────────────────────
+
+export interface Client {
+  id: string
+  businessName: string
+  ownerName: string
+  email?: string | null
+  whatsapp?: string | null
+  address?: string | null
+  neighborhood?: string | null
+  niche?: string | null
+  package?: 'basico' | 'pro' | 'premium' | null
+  monthlyValue?: number | null
+  startDate: string
+  status: 'active' | 'paused' | 'cancelled'
+  origin: string
+  leadId?: string | null
+  notes?: string | null
+  cancelledAt?: string | null
+  cancellationReason?: string | null
+  createdAt: string
+  updatedAt: string
+  weeklyReports?: WeeklyReport[]
+  totalReports?: number
+  lastReportAt?: string | null
+  _count?: { weeklyReports: number }
+}
+
+export interface CreateClientInput {
+  businessName: string
+  ownerName: string
+  email?: string | null
+  whatsapp?: string | null
+  address?: string | null
+  neighborhood?: string | null
+  niche?: string | null
+  package?: 'basico' | 'pro' | 'premium' | null
+  monthlyValue?: number | null
+  startDate?: string
+  origin?: 'lead' | 'referral' | 'manual'
+  leadId?: string | null
+  notes?: string | null
+}
+
+export interface WeeklyReport {
+  id: string
+  clientId: string
+  weekStart: string
+  weekEnd: string
+  messagesSent: number
+  messagesRead: number
+  repliesReceived: number
+  newLeadsGen: number
+  appointmentsSet: number
+  conversionRate: number
+  highlights?: string | null
+  recommendations?: string | null
+  nextWeekPlan?: string | null
+  pdfPath?: string | null
+  sentViaEmail: boolean
+  sentViaWhatsApp: boolean
+  sentAt?: string | null
+  createdAt: string
+}
+
+export interface ClientsOverview {
+  totalActive: number
+  totalMRR: number
+  avgPackageValue: number
+  byPackage: Record<string, number>
+  byNiche: Record<string, number>
+  churnThisMonth: number
+  newThisMonth: number
+  reportsGeneratedThisWeek: number
+}
+
+export interface MrrProjection {
+  history: Array<{ label: string; mrr: number; clients: number }>
+  projection: Array<{ label: string; projectedMrr: number }>
+  avgGrowthRate: number
+}
+
 // ─── Agent types ──────────────────────────────────────────────────────────────
 
 export interface AgentConversation {
@@ -384,6 +467,39 @@ export interface AgentAnalytics {
   }
 }
 
+// ===== CLIENTS =====
+export const clientsApi = {
+  list: (params?: { status?: string; niche?: string; neighborhood?: string; package?: string; page?: number; limit?: number }) =>
+    api.get<{ clients: Client[]; total: number; page: number; limit: number }>('/clients', { params }),
+  get: (id: string) =>
+    api.get<Client>(`/clients/${id}`),
+  create: (data: CreateClientInput) =>
+    api.post<Client>('/clients', data),
+  update: (id: string, data: Partial<CreateClientInput>) =>
+    api.put<Client>(`/clients/${id}`, data),
+  patchStatus: (id: string, status: 'active' | 'paused' | 'cancelled', cancellationReason?: string) =>
+    api.patch<Client>(`/clients/${id}/status`, { status, cancellationReason }),
+  delete: (id: string) =>
+    api.delete(`/clients/${id}`),
+  listReports: (id: string, params?: { page?: number; limit?: number }) =>
+    api.get<{ reports: WeeklyReport[]; total: number }>(`/clients/${id}/reports`, { params }),
+  generateReport: (id: string, weekStart?: string) =>
+    api.post<WeeklyReport | { queued: boolean; jobId: string }>(`/clients/${id}/reports/generate`, weekStart ? { weekStart } : {}),
+  overview: () =>
+    api.get<ClientsOverview>('/clients/metrics/overview'),
+  mrrProjection: () =>
+    api.get<MrrProjection>('/clients/metrics/mrr-projection'),
+}
+
+export const reportsApi = {
+  send: (id: string, channels: ('email' | 'whatsapp')[] = ['email', 'whatsapp']) =>
+    api.post<{ queued?: boolean; sentViaEmail?: boolean; sentViaWhatsApp?: boolean }>(`/reports/${id}/send`, { channels }),
+  pdfUrl: (id: string) =>
+    `${api.defaults.baseURL}/reports/${id}/pdf`,
+  previewUrl: (id: string) =>
+    `${api.defaults.baseURL}/reports/${id}/preview`,
+}
+
 // ─── Agent API ────────────────────────────────────────────────────────────────
 
 export const agentApi = {
@@ -395,4 +511,6 @@ export const agentApi = {
   test:          (leadId: string, message: string)   => api.post('/agent/test', { leadId, message }),
   objections:    ()                                  => api.get('/agent/objections'),
   leadStatus:    (leadId: string)                    => api.get(`/agent/lead/${leadId}/managed`),
+
 }
+

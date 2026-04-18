@@ -5,6 +5,7 @@ import { env } from '../config/env.js'
 import { logger } from '../utils/logger.js'
 import { wsEvents } from './websocket.service.js'
 import { normalizePhone } from './duplicate.service.js'
+import { getSegmentoByNiche } from '../data/marketIntelligence.js'
 import type { DigitalLevel, Classification, LeadStatus } from '@prisma/client'
 
 // Mapeamento das colunas da planilha i9 Cowork → Lead
@@ -45,7 +46,30 @@ interface ParsedLead {
   source: string
   status: LeadStatus
   notes: string
+  // Enriched from marketIntelligence
+  recommendedPackage?: string
+  conversionPotential?: number
   dataHash: string
+}
+
+/**
+ * Enriquece os campos do lead com dados de inteligência de mercado.
+ * Preenche apenas campos vazios — não sobrescreve dados da planilha.
+ */
+function enrichWithMarketIntelligence(
+  niche: string,
+  existing: { painPoints: string; idealService: string; revenuePotential: string },
+): { painPoints: string; idealService: string; revenuePotential: string; recommendedPackage?: string; conversionPotential?: number } {
+  const segmento = getSegmentoByNiche(niche)
+  if (!segmento) return existing
+
+  return {
+    painPoints: existing.painPoints || segmento.dor,
+    idealService: existing.idealService || segmento.servicoIdeal,
+    revenuePotential: existing.revenuePotential || `R$ ${segmento.ticketMin} – R$ ${segmento.ticketMax}/mês`,
+    recommendedPackage: segmento.pacoteRecomendado.toLowerCase().replace(/[áàã]/g, 'a'),
+    conversionPotential: segmento.potencialConversao,
+  }
 }
 
 function getSheets(): sheets_v4.Sheets {
@@ -143,13 +167,22 @@ function parseRow(row: SheetRow): ParsedLead | null {
     businessName: raw[23] ?? raw[1] ?? '', // coluna X ou fallback para nome
   }
 
+  // Enriquece com dados de inteligência de mercado (não sobrescreve dados da planilha)
+  const enriched = enrichWithMarketIntelligence(data.niche, {
+    painPoints: data.painPoints,
+    idealService: data.idealService,
+    revenuePotential: data.revenuePotential,
+  })
+
+  const finalData = { ...data, ...enriched }
+
   // Hash dos dados para detectar mudanças sem comparar campo a campo
   const dataHash = crypto
     .createHash('md5')
-    .update(JSON.stringify(data))
+    .update(JSON.stringify(finalData))
     .digest('hex')
 
-  return { ...data, dataHash }
+  return { ...finalData, dataHash }
 }
 
 export interface SyncResult {
@@ -172,7 +205,7 @@ export async function syncFromSheets(): Promise<SyncResult> {
   // Lê aba "Leads Capturados" a partir da linha 2
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId: env.GOOGLE_SHEETS_ID,
-    range: 'Leads Capturados!A2:X',
+    range: 'Leads!A2:X',
   })
 
   const rows = response.data.values ?? []

@@ -11,6 +11,11 @@ import Analytics from './pages/Analytics'
 import Settings from './pages/Settings'
 import Duplicates from './pages/Leads/Duplicates'
 import AgentPanel from './pages/Agent/AgentPanel'
+import ClientList from './pages/Clients/ClientList'
+import ClientDetail from './pages/Clients/ClientDetail'
+import NewClient from './pages/Clients/NewClient'
+import ClientEdit from './pages/Clients/ClientEdit'
+import MarketIntelligence from './pages/MarketIntelligence'
 
 // Guard que redireciona para /login se não autenticado
 function ProtectedRoutes() {
@@ -62,6 +67,13 @@ export default function App() {
           <Route path="/analytics" element={<Analytics />} />
           <Route path="/agent" element={<AgentPanel />} />
           <Route path="/settings" element={<Settings />} />
+          {/* Clientes */}
+          <Route path="/clients" element={<ClientList />} />
+          <Route path="/clients/new" element={<NewClient />} />
+          <Route path="/clients/:id" element={<ClientDetail />} />
+          <Route path="/clients/:id/edit" element={<ClientEdit />} />
+          {/* Intel. de Mercado */}
+          <Route path="/market-intelligence" element={<MarketIntelligence />} />
         </Route>
       </Route>
     </Routes>

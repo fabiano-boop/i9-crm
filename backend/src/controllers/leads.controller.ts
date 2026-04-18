@@ -6,6 +6,7 @@ import { getPaginationParams, buildPaginatedResult } from '../utils/pagination.j
 import { scoreLead, bulkScoreLeads } from '../services/scoring.service.js'
 import { generatePitch } from '../services/claude.service.js'
 import { pauseActiveCadencesForLead } from '../services/cadence.service.js'
+import { logger } from '../utils/logger.js'
 
 // Schema de importação em bulk (aceita classification + score + whatsappAngle)
 const importLeadSchema = z.object({
@@ -173,7 +174,6 @@ export async function updateLead(req: Request, res: Response): Promise<void> {
     where: { id: (req.params['id'] as string) },
     data: {
       ...result.data,
-      // Atualiza lastContactAt se o status mudou para CONTACTED
       ...(result.data.status === 'CONTACTED' && !existing.lastContactAt
         ? { lastContactAt: new Date() }
         : {}),
@@ -256,14 +256,12 @@ export async function createInteraction(req: Request, res: Response): Promise<vo
     prisma.interaction.create({
       data: { leadId, ...result.data },
     }),
-    // Atualiza lastContactAt do lead
     prisma.lead.update({
       where: { id: leadId },
       data: { lastContactAt: new Date() },
     }),
   ])
 
-  // Auto-pausar cadências ativas quando o lead responde
   if (result.data.direction === 'IN') {
     pauseActiveCadencesForLead(leadId, 'lead_replied').catch(() => null)
   }
@@ -300,7 +298,7 @@ export async function rescoreLead(req: Request, res: Response): Promise<void> {
       res.status(503).json({ error: 'Rate limit da API Anthropic atingido', code: 'AI_RATE_LIMIT' })
       return
     }
-    throw err // deixa o asyncHandler tratar os demais erros
+    throw err
   }
 }
 
@@ -332,4 +330,57 @@ export async function generateLeadPitch(req: Request, res: Response): Promise<vo
   }
   const pitch = await generatePitch(lead)
   res.json(pitch)
+}
+
+// POST /api/leads/:id/convert
+export async function convertLead(req: Request, res: Response): Promise<void> {
+  const leadId = req.params['id'] as string
+
+  const lead = await prisma.lead.findUnique({ where: { id: leadId } })
+  if (!lead) {
+    res.status(404).json({ error: 'Lead não encontrado', code: 'NOT_FOUND' })
+    return
+  }
+
+  if (lead.status === 'CLOSED') {
+    res.status(409).json({ error: 'Lead já foi convertido em cliente', code: 'ALREADY_CONVERTED' })
+    return
+  }
+
+  const existing = await prisma.client.findFirst({ where: { leadId } })
+  if (existing) {
+    res.status(409).json({
+      error: 'Já existe um cliente vinculado a este lead',
+      code: 'ALREADY_CONVERTED',
+      clientId: existing.id,
+    })
+    return
+  }
+
+  const client = await prisma.client.create({
+    data: {
+      businessName: lead.businessName,
+      ownerName: lead.name,
+      email: lead.email ?? undefined,
+      whatsapp: lead.whatsapp ?? undefined,
+      address: lead.address ?? undefined,
+      neighborhood: lead.neighborhood ?? undefined,
+      niche: lead.niche ?? undefined,
+      origin: 'lead',
+      leadId: lead.id,
+      notes: lead.notes ?? undefined,
+    },
+  })
+
+  await prisma.lead.update({
+    where: { id: leadId },
+    data: {
+      status: 'CLOSED',
+      pipelineStage: 'closed',
+    },
+  })
+
+  logger.info({ leadId, clientId: client.id }, 'Lead convertido em cliente')
+
+  res.status(201).json({ client, leadId })
 }

@@ -28,6 +28,8 @@ const envSchema = z.object({
   FRONTEND_URL: z.string().default('http://localhost:5173,http://localhost:5174'),
   LOG_LEVEL: z.string().default('info'),
   WHATSAPP_AGENT_ENABLED: z.coerce.boolean().default(false),
+  REPORTS_BASE_URL: z.string().default('http://localhost:3000'),
+  PUPPETEER_EXECUTABLE_PATH: z.string().optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)
