@@ -289,16 +289,21 @@ export async function rescoreLead(req: Request, res: Response): Promise<void> {
     const result = await scoreLead((req.params['id'] as string))
     res.json(result)
   } catch (err: unknown) {
-    const e = err as { status?: number; message?: string }
+    const e = err as { status?: number; message?: string; error?: unknown }
+    logger.warn({ anthropicStatus: e?.status, anthropicMsg: e?.message }, 'Erro ao chamar Anthropic')
     if (e?.status === 401) {
-      res.status(503).json({ error: 'ANTHROPIC_API_KEY inválida — atualize no Railway', code: 'AI_AUTH_ERROR' })
+      res.status(503).json({ error: 'ANTHROPIC_API_KEY inválida — atualize no Railway', code: 'AI_AUTH_ERROR', detail: e?.message })
+      return
+    }
+    if (e?.status === 403) {
+      res.status(503).json({ error: 'Sem permissão na API Anthropic (billing?)', code: 'AI_FORBIDDEN', detail: e?.message })
       return
     }
     if (e?.status === 429) {
       res.status(503).json({ error: 'Rate limit da API Anthropic atingido', code: 'AI_RATE_LIMIT' })
       return
     }
-    throw err
+    res.status(503).json({ error: 'Erro na API Anthropic', code: 'AI_ERROR', detail: String(e?.message), httpStatus: e?.status })
   }
 }
 
