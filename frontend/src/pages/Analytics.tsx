@@ -141,7 +141,7 @@ export default function Analytics() {
 
   if (loading) {
     return (
-      <div className="p-6 space-y-6 animate-pulse">
+      <div className="p-6 space-y-6 animate-pulse" style={{ background: '#061422', minHeight: '100%' }}>
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           {[...Array(4)].map((_, i) => <div key={i} className="h-24 rounded-xl" style={{ background: '#0B1F30' }} />)}
         </div>
@@ -156,7 +156,7 @@ export default function Analytics() {
 
   if (error) {
     return (
-      <div className="p-6 flex items-center justify-center min-h-64">
+      <div className="p-6 flex items-center justify-center min-h-64" style={{ background: '#061422', minHeight: '100%' }}>
         <div className="rounded-xl px-6 py-4 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>
           {error}
         </div>
@@ -165,7 +165,7 @@ export default function Analytics() {
   }
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-6 space-y-8" style={{ background: '#061422', minHeight: '100%' }}>
       <div>
         <h1 className="text-xl font-bold" style={{ color: '#E8F4F8' }}>Analytics</h1>
         <p className="text-sm mt-0.5" style={{ color: '#7EAFC4' }}>Visão geral do desempenho de leads e campanhas</p>
