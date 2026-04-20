@@ -324,7 +324,10 @@ export async function sendReport(reportId: string): Promise<void> {
     }
   }
 
-  // ── WhatsApp via Evolution API ────────────────────────────────────────────
+  // ── WhatsApp ──────────────────────────────────────────────────────────────
+  // [LEGADO Evolution API removido — substituído pelo Whapi]
+  // TODO: reimplementar envio de relatório via Whapi quando necessário.
+  /*
   if (client.whatsapp && env.EVOLUTION_API_URL && env.EVOLUTION_API_KEY) {
     try {
       const pdfUrl = report.pdfPath
@@ -346,10 +349,14 @@ export async function sendReport(reportId: string): Promise<void> {
       logger.warn({ err, reportId }, 'Falha ao enviar relatório por WhatsApp')
     }
   }
+  */
 }
 
 // ─── Helpers de mensagem ──────────────────────────────────────────────────────
 
+// [LEGADO Evolution API] — helper usado apenas pelo envio via WhatsApp que foi
+// removido. Mantido comentado para eventual reativação via Whapi.
+/*
 function buildWhatsAppMessage(
   client: Client,
   report: WeeklyReport,
@@ -375,6 +382,7 @@ function buildWhatsAppMessage(
 
   return lines.join('\n')
 }
+*/
 
 function buildEmailHtml(client: Client, report: WeeklyReport, readRate: string): string {
   return `<!DOCTYPE html>

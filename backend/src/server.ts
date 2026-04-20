@@ -11,6 +11,7 @@ import { prisma } from './config/database.js'
 import apiRouter from './routes/index.js'
 import { startAllWorkers, scheduleAllJobs } from './jobs/index.js'
 import { initWebSocket } from './services/websocket.service.js'
+import { startDailyLeadScraperJob } from './jobs/dailyLeadScraper.job.js'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -75,6 +76,9 @@ httpServer.listen(PORT, () => {
   // Inicia workers e agendamentos (falham silenciosamente sem Redis)
   startAllWorkers().catch((err) => logger.warn({ err }, 'startAllWorkers falhou'))
   scheduleAllJobs().catch((err) => logger.warn({ err }, 'scheduleAllJobs falhou'))
+
+  // Scraper diário de leads (node-cron)
+  startDailyLeadScraperJob()
 })
 
 export { app, httpServer }
