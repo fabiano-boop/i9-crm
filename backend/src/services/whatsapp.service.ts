@@ -160,31 +160,41 @@ export async function processWhatsAppWebhook(body: Record<string, unknown>): Pro
 
     logger.info({ phone, content }, 'Mensagem recebida via Whapi')
 
-    const campaignLeads = await prisma.campaignLead.findMany({
-      where: { lead: { OR: [{ phone: { contains: phone } }, { whatsapp: { contains: phone } }] } },
-      orderBy: { sentAt: 'desc' },
-      take: 1,
+    // Busca direto na tabela Lead — sem depender de CampaignLead
+    const lead = await prisma.lead.findFirst({
+      where: { OR: [{ phone: { contains: phone } }, { whatsapp: { contains: phone } }] },
     })
-    if (campaignLeads.length === 0) {
+
+    if (!lead) {
       logger.warn({ phone }, 'Webhook: lead não encontrado para o número')
       continue
     }
 
-    const cl = campaignLeads[0]
+    logger.info({ leadId: lead.id, leadName: lead.name, phone }, 'Lead identificado via webhook')
 
-    await Promise.all([
-      prisma.campaignLead.update({ where: { id: cl.id }, data: { replied: true, repliedAt: new Date(), status: 'REPLIED' } }),
-      prisma.interaction.create({ data: { leadId: cl.leadId, type: 'WHATSAPP', channel: 'whatsapp', content, direction: 'IN' } }),
-      prisma.lead.update({ where: { id: cl.leadId }, data: { status: 'REPLIED', lastContactAt: new Date() } }),
-    ])
+    // Atualiza CampaignLead mais recente se existir (tracking de campanha)
+    const recentCampaignLead = await prisma.campaignLead.findFirst({
+      where: { leadId: lead.id },
+      orderBy: { sentAt: 'desc' },
+    })
+    const updates: Promise<unknown>[] = [
+      prisma.interaction.create({ data: { leadId: lead.id, type: 'WHATSAPP', channel: 'whatsapp', content, direction: 'IN' } }),
+      prisma.lead.update({ where: { id: lead.id }, data: { status: 'REPLIED', lastContactAt: new Date() } }),
+    ]
+    if (recentCampaignLead) {
+      updates.push(
+        prisma.campaignLead.update({ where: { id: recentCampaignLead.id }, data: { replied: true, repliedAt: new Date(), status: 'REPLIED' } })
+      )
+    }
+    await Promise.all(updates)
 
-    handleLeadReply(cl.leadId).catch((err) =>
-      logger.warn({ err, leadId: cl.leadId }, 'Erro ao pausar cadências na resposta')
+    handleLeadReply(lead.id).catch((err) =>
+      logger.warn({ err, leadId: lead.id }, 'Erro ao pausar cadências na resposta')
     )
 
     if (env.WHATSAPP_AGENT_ENABLED && content.trim()) {
-      processMessage(cl.leadId, content).catch((err) =>
-        logger.error({ err, leadId: cl.leadId }, 'Agente: erro ao processar mensagem recebida')
+      processMessage(lead.id, content).catch((err) =>
+        logger.error({ err, leadId: lead.id }, 'Agente: erro ao processar mensagem recebida')
       )
     }
   }
