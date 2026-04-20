@@ -5,9 +5,9 @@ import { logger } from '../utils/logger.js'
 import { createTrackingUrl } from './tracking.service.js'
 import { processMessage, handleLeadReply } from './whatsappAgent.service.js'
 
-const evolutionHttp = axios.create({
-  baseURL: env.EVOLUTION_API_URL,
-  headers: { apikey: env.EVOLUTION_API_KEY },
+const whapiHttp = axios.create({
+  baseURL: env.WHAPI_URL,
+  headers: { Authorization: `Bearer ${env.WHAPI_TOKEN}` },
   timeout: 15_000,
 })
 
@@ -22,21 +22,26 @@ function humanDelay(): Promise<void> {
   return new Promise((r) => setTimeout(r, ms))
 }
 
+// Normaliza número para formato Whapi: 5511999999999
+function normalizePhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '')
+  // Já tem DDI 55
+  if (digits.startsWith('55') && digits.length >= 12) return digits
+  return `55${digits}`
+}
+
 // Envia mensagem com retry automático (3x)
 export async function sendText(phone: string, message: string, retries = 3): Promise<boolean> {
-  const number = phone.replace(/\D/g, '')
-  if (!number) return false
+  const to = normalizePhone(phone)
+  if (to.length < 12) return false
 
   for (let attempt = 1; attempt <= retries; attempt++) {
     try {
-      await evolutionHttp.post(`/message/sendText/${env.EVOLUTION_INSTANCE_NAME}`, {
-        number: `55${number}`,
-        text: message,
-      })
+      await whapiHttp.post('/messages/text', { to, body: message })
       return true
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
-      logger.warn({ phone, attempt, err: msg }, 'Falha ao enviar WhatsApp')
+      logger.warn({ phone: to, attempt, err: msg }, 'Falha ao enviar WhatsApp via Whapi')
       if (attempt < retries) await new Promise((r) => setTimeout(r, 2000 * attempt))
     }
   }
@@ -69,7 +74,6 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
       continue
     }
 
-    // Personaliza mensagem com variáveis do lead
     const vars: Record<string, string> = {
       nome: lead.name,
       negocio: lead.businessName,
@@ -78,7 +82,6 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
       angulo: lead.whatsappAngle ?? '',
     }
 
-    // Substitui URLs por links rastreados
     let message = interpolate(campaign.bodyText, vars)
     message = message.replace(
       /(https?:\/\/[^\s]+)/g,
@@ -96,11 +99,9 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
 
     if (ok) sent++; else failed++
 
-    // Delay humano entre mensagens (exceto no último)
     if (cl !== pendingLeads[pendingLeads.length - 1]) await humanDelay()
   }
 
-  // Finaliza campanha
   await prisma.campaign.update({
     where: { id: campaignId },
     data: { status: 'COMPLETED' },
@@ -109,58 +110,81 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
   logger.info({ campaignId, sent, failed }, 'Disparo WhatsApp concluído')
 }
 
-// Webhook handler — processa eventos da Evolution API
+// Formato do webhook Whapi:
+// { messages: [{ id, type, from, chat_id, timestamp, from_me, text: { body } }] }
+// { statuses: [{ id, type: "sent"|"delivered"|"read"|"failed", chat_id, timestamp }] }
 export async function processWhatsAppWebhook(body: Record<string, unknown>): Promise<void> {
-  const event = body['event'] as string
-  const data = body['data'] as Record<string, unknown>
-  if (!event || !data) return
+  logger.debug({ keys: Object.keys(body) }, 'Webhook Whapi recebido')
 
-  logger.debug({ event }, 'Webhook WhatsApp recebido')
+  // Status de entrega
+  const statuses = body['statuses'] as Array<Record<string, unknown>> | undefined
+  if (Array.isArray(statuses)) {
+    for (const status of statuses) {
+      const chatId = status['chat_id'] as string | undefined
+      const type = status['type'] as string | undefined
+      if (!chatId || !type) continue
 
-  // Tenta localizar o CampaignLead pelo número do destinatário
-  const remoteJid = (data['key'] as Record<string, unknown>)?.['remoteJid'] as string
-  if (!remoteJid) return
-  const phone = remoteJid.replace('@s.whatsapp.net', '').replace('55', '')
+      const phone = chatId.replace('@s.whatsapp.net', '').replace(/^55/, '')
 
-  const campaignLeads = await prisma.campaignLead.findMany({
-    where: { lead: { OR: [{ phone: { contains: phone } }, { whatsapp: { contains: phone } }] } },
-    orderBy: { sentAt: 'desc' },
-    take: 1,
-  })
-  if (campaignLeads.length === 0) return
+      const campaignLeads = await prisma.campaignLead.findMany({
+        where: { lead: { OR: [{ phone: { contains: phone } }, { whatsapp: { contains: phone } }] } },
+        orderBy: { sentAt: 'desc' },
+        take: 1,
+      })
+      if (campaignLeads.length === 0) continue
 
-  const cl = campaignLeads[0]
+      const cl = campaignLeads[0]
 
-  if (event === 'messages.update') {
-    const status = (data['update'] as Record<string, unknown>)?.['status'] as string
-    if (status === 'DELIVERY_ACK') {
-      await prisma.campaignLead.update({ where: { id: cl.id }, data: { status: 'DELIVERED', deliveredAt: new Date() } })
-    } else if (status === 'READ') {
-      await prisma.campaignLead.update({ where: { id: cl.id }, data: { status: 'OPENED', openedAt: new Date() } })
-    }
-  } else if (event === 'messages.upsert') {
-    // Mensagem recebida = resposta do lead
-    const fromMe = (data['key'] as Record<string, unknown>)?.['fromMe'] as boolean
-    if (!fromMe) {
-      const content = (data['message'] as Record<string, unknown>)?.['conversation'] as string ?? ''
-
-      await Promise.all([
-        prisma.campaignLead.update({ where: { id: cl.id }, data: { replied: true, repliedAt: new Date(), status: 'REPLIED' } }),
-        prisma.interaction.create({ data: { leadId: cl.leadId, type: 'WHATSAPP', channel: 'whatsapp', content, direction: 'IN' } }),
-        prisma.lead.update({ where: { id: cl.leadId }, data: { status: 'REPLIED', lastContactAt: new Date() } }),
-      ])
-
-      // Pausa cadências ativas ao receber resposta
-      handleLeadReply(cl.leadId).catch((err) =>
-        logger.warn({ err, leadId: cl.leadId }, 'Erro ao pausar cadências na resposta')
-      )
-
-      // Agente IA processa a mensagem (fire-and-forget para não bloquear webhook)
-      if (env.WHATSAPP_AGENT_ENABLED && content.trim()) {
-        processMessage(cl.leadId, content).catch((err) =>
-          logger.error({ err, leadId: cl.leadId }, 'Agente: erro ao processar mensagem recebida')
-        )
+      if (type === 'delivered') {
+        await prisma.campaignLead.update({ where: { id: cl.id }, data: { status: 'DELIVERED', deliveredAt: new Date() } })
+      } else if (type === 'read') {
+        await prisma.campaignLead.update({ where: { id: cl.id }, data: { status: 'OPENED', openedAt: new Date() } })
       }
+    }
+  }
+
+  // Mensagens recebidas
+  const messages = body['messages'] as Array<Record<string, unknown>> | undefined
+  if (!Array.isArray(messages)) return
+
+  for (const msg of messages) {
+    const fromMe = msg['from_me'] as boolean
+    if (fromMe) continue
+
+    const chatId = (msg['chat_id'] ?? msg['from']) as string | undefined
+    if (!chatId) continue
+
+    const phone = chatId.replace('@s.whatsapp.net', '').replace(/^55/, '')
+    const content = (msg['text'] as Record<string, unknown> | undefined)?.['body'] as string ?? ''
+
+    logger.info({ phone, content }, 'Mensagem recebida via Whapi')
+
+    const campaignLeads = await prisma.campaignLead.findMany({
+      where: { lead: { OR: [{ phone: { contains: phone } }, { whatsapp: { contains: phone } }] } },
+      orderBy: { sentAt: 'desc' },
+      take: 1,
+    })
+    if (campaignLeads.length === 0) {
+      logger.warn({ phone }, 'Webhook: lead não encontrado para o número')
+      continue
+    }
+
+    const cl = campaignLeads[0]
+
+    await Promise.all([
+      prisma.campaignLead.update({ where: { id: cl.id }, data: { replied: true, repliedAt: new Date(), status: 'REPLIED' } }),
+      prisma.interaction.create({ data: { leadId: cl.leadId, type: 'WHATSAPP', channel: 'whatsapp', content, direction: 'IN' } }),
+      prisma.lead.update({ where: { id: cl.leadId }, data: { status: 'REPLIED', lastContactAt: new Date() } }),
+    ])
+
+    handleLeadReply(cl.leadId).catch((err) =>
+      logger.warn({ err, leadId: cl.leadId }, 'Erro ao pausar cadências na resposta')
+    )
+
+    if (env.WHATSAPP_AGENT_ENABLED && content.trim()) {
+      processMessage(cl.leadId, content).catch((err) =>
+        logger.error({ err, leadId: cl.leadId }, 'Agente: erro ao processar mensagem recebida')
+      )
     }
   }
 }
