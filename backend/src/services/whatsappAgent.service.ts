@@ -159,19 +159,21 @@ function buildHistory(interactions: Interaction[]): Anthropic.Messages.MessagePa
 // ─── Send via Evolution API (inline — evita import circular) ──────────────────
 
 async function sendWhatsAppReply(phone: string, message: string): Promise<boolean> {
-  const number = phone.replace(/\D/g, '')
-  if (!number) return false
+  const digits = phone.replace(/\D/g, '')
+  if (!digits) return false
+  // Evita duplicar o DDI 55 se o número já vier com ele
+  const to = digits.startsWith('55') && digits.length >= 12 ? digits : `55${digits}`
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       await axios.post(
         `${env.WHAPI_URL}/messages/text`,
-        { to: `55${number}`, body: message },
+        { to, body: message },
         { headers: { Authorization: `Bearer ${env.WHAPI_TOKEN}` }, timeout: 15_000 },
       )
       return true
     } catch (err) {
-      logger.warn({ phone, attempt, err: err instanceof Error ? err.message : err }, 'Agente: falha ao enviar')
+      logger.warn({ phone: to, attempt, err: err instanceof Error ? err.message : err }, 'Agente: falha ao enviar')
       if (attempt < 3) await new Promise((r) => setTimeout(r, 2000 * attempt))
     }
   }
