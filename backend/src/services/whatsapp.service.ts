@@ -114,6 +114,7 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
 // { messages: [{ id, type, from, chat_id, timestamp, from_me, text: { body } }] }
 // { statuses: [{ id, type: "sent"|"delivered"|"read"|"failed", chat_id, timestamp }] }
 export async function processWhatsAppWebhook(body: Record<string, unknown>): Promise<void> {
+  logger.info({ payload: JSON.stringify(body) }, 'Webhook Whapi recebido')
   logger.debug({ keys: Object.keys(body) }, 'Webhook Whapi recebido')
 
   // Status de entrega
