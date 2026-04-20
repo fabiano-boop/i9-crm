@@ -165,9 +165,9 @@ async function sendWhatsAppReply(phone: string, message: string): Promise<boolea
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
       await axios.post(
-        `${env.EVOLUTION_API_URL}/message/sendText/${env.EVOLUTION_INSTANCE_NAME}`,
-        { number: `55${number}`, text: message },
-        { headers: { apikey: env.EVOLUTION_API_KEY }, timeout: 15_000 },
+        `${env.WHAPI_URL}/messages/text`,
+        { to: `55${number}`, body: message },
+        { headers: { Authorization: `Bearer ${env.WHAPI_TOKEN}` }, timeout: 15_000 },
       )
       return true
     } catch (err) {
