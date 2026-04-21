@@ -78,7 +78,12 @@ httpServer.listen(PORT, () => {
   scheduleAllJobs().catch((err) => logger.warn({ err }, 'scheduleAllJobs falhou'))
 
   // Scraper diário de leads (node-cron)
-  startDailyLeadScraperJob()
+  try {
+    startDailyLeadScraperJob()
+    logger.info('Scraper diário de leads iniciado com sucesso')
+  } catch (err) {
+    logger.error({ err }, 'Falha ao iniciar scraper de leads')
+  }
 })
 
 export { app, httpServer }
