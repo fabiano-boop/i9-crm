@@ -33,4 +33,15 @@ router.use('/reports', reportsRouter)   // Ações diretas sobre relatórios
 router.use('/analytics', analyticsRouter) // Dashboard de métricas
 router.use('/whatsapp', whatsappRouter)   // Status da conexão WhatsApp
 
+// ROTA DE TESTE — scraper manual
+router.get('/scraper/test', async (_req, res) => {
+  try {
+    const { runLeadScraper } = await import('../services/leadScraper.service.js')
+    res.json({ status: 'iniciado', message: 'Scraper rodando em background' })
+    await runLeadScraper()
+  } catch (err: any) {
+    res.status(500).json({ status: 'erro', message: err.message })
+  }
+})
+
 export default router
