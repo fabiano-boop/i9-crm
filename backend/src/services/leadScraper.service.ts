@@ -141,6 +141,7 @@ export async function runLeadScraper(): Promise<void> {
             neighborhood: bairro,
             address: place.formattedAddress || `${bairro}, São Paulo - SP`,
             phone: phone,
+            whatsapp: phone,
             website: place.websiteUri || null,
             score,
             classification: temperature as any,
