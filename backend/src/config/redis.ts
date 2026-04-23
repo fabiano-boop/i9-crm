@@ -8,10 +8,14 @@ let redisAvailable = false
 export function getRedis(): Redis {
   if (!redisInstance) {
     redisInstance = new Redis(env.REDIS_URL, {
-      maxRetriesPerRequest: null,
+      maxRetriesPerRequest: null,   // obrigatório para BullMQ
+      enableReadyCheck: false,       // evita timeout na inicialização
       lazyConnect: true,
       enableOfflineQueue: false,
-      retryStrategy: () => null, // não reconecta — falha silenciosamente
+      retryStrategy: (times: number) => {
+        // backoff exponencial: 100ms → 200ms → 400ms ... até 5s
+        return Math.min(100 * Math.pow(2, times - 1), 5000)
+      },
     })
     redisInstance.on('error', () => {
       // Silencia erros de conexão — Redis é opcional
