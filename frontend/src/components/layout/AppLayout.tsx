@@ -94,9 +94,8 @@ function AppLayoutInner() {
         <header
           className="h-12 flex items-center justify-end px-4 shrink-0"
           style={{
-            background:   '#0A1E30',
-            borderBottom: '1px solid rgba(0,200,232,0.12)',
-            fontFamily:   "'Inter', sans-serif",
+            background: '#061422',
+            fontFamily: "'Inter', sans-serif",
           }}
         >
           <AlertsBadge token={token} />

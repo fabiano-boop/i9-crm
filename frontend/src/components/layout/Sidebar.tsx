@@ -82,7 +82,7 @@ export default function Sidebar() {
           }}
         />
         <span
-          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: '14px', color: '#fff' }}
+          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: '11px', color: '#fff', whiteSpace: 'nowrap' }}
         >
           i9 Soluções Digitais
         </span>
