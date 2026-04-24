@@ -97,7 +97,15 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
         : { status: 'FAILED', errorMsg: 'Falha após 3 tentativas' },
     })
 
-    if (ok) sent++; else failed++
+    if (ok) {
+      await prisma.lead.update({
+        where: { id: cl.leadId },
+        data: { status: 'CONTACTED' },
+      })
+      sent++
+    } else {
+      failed++
+    }
 
     if (cl !== pendingLeads[pendingLeads.length - 1]) await humanDelay()
   }
