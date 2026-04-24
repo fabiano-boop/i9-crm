@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../config/database.js'
 import { getPaginationParams, buildPaginatedResult } from '../utils/pagination.js'
 import { logger } from '../utils/logger.js'
+import { sendCampaignWhatsApp } from '../services/whatsapp.service.js'
 
 const campaignSchema = z.object({
   name: z.string().min(1),
@@ -167,6 +168,16 @@ export async function sendCampaign(req: Request, res: Response): Promise<void> {
   await prisma.campaign.update({ where: { id }, data: { status: 'RUNNING', sentAt: new Date() } })
 
   logger.info({ campaignId: campaign.id, channel, leads: campaign._count.campaignLeads }, 'Campanha iniciada')
+
+  // Dispara em background sem bloquear a resposta HTTP.
+  // Para campanhas grandes (3k+ leads com delay 30-60s), isso roda por horas —
+  // se o processo reiniciar, o disparo para. Leads já enviados (status=SENT) não
+  // são reenviados pois sendCampaignWhatsApp filtra apenas status=PENDING.
+  if (campaign.type === 'WHATSAPP' || campaign.type === 'BOTH') {
+    sendCampaignWhatsApp(campaign.id).catch((err) =>
+      logger.error({ err, campaignId: campaign.id }, 'Erro no disparo da campanha WhatsApp')
+    )
+  }
 
   res.json({
     message: 'Campanha iniciada',
