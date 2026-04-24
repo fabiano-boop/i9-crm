@@ -67,7 +67,14 @@ export async function scheduleAlertJobs(): Promise<void> {
       { name: 'morning-digest', data: {} },
     )
 
-    logger.info('Alert jobs agendados (engagement @hourly, cooling @09h, digest @08h seg-sáb)')
+    // SPRINT 2: checar faturas vencidas diariamente às 09h30
+    await getCoolingQueue().upsertJobScheduler(
+      'alert-overdue-invoices-cron',
+      { pattern: '30 9 * * *' },
+      { name: 'check-overdue-invoices', data: {} },
+    )
+
+    logger.info('Alert jobs agendados (engagement @hourly, cooling @09h, digest @08h seg-sáb, overdue-invoices @09h30)')
   } catch (err) {
     logger.warn({ err }, 'Erro ao agendar alert jobs')
   }
@@ -135,6 +142,8 @@ export async function startAlertWorkers(): Promise<void> {
       .on('failed', (job, err) => logger.error({ jobId: job?.id, err }, 'morning-digest job falhou'))
       .on('error', (err) => logger.warn({ err }, 'morning-digest worker error'))
 
+    // SPRINT 2: alertas de faturas vencidas via alert-check-cooling worker
+    // (reutiliza a mesma fila cooling para não criar novo worker)
     logger.info('Alert workers iniciados')
   } catch (err) {
     logger.warn({ err }, 'Erro ao iniciar alert workers')

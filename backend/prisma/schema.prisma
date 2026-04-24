@@ -346,12 +346,15 @@ model Client {
   origin              String         @default("lead")   // lead | referral | manual
   leadId              String?
   internalCost        Float?         @default(0)        // custo interno mensal (hora + ferramentas)
+  recurringBillingDay Int?           @default(5)        // SPRINT 2: dia do mês para cobrança recorrente (1-28)
+  reportSendDay       Int?           @default(6)        // SPRINT 2: dia do mês para envio do relatório (1-28)
   notes               String?
   cancelledAt         DateTime?
   cancellationReason  String?
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   weeklyReports WeeklyReport[]
+  invoices      Invoice[]            // SPRINT 2: faturas do cliente
 
   @@index([status])
 }
@@ -402,7 +405,37 @@ model Service {
   category    String   // site | landing_page | trafego | social_media | criativo | app | consultoria
   promoPrice  Float
   normalPrice Float
+  billingType String   @default("RECURRING") // SPRINT 2: RECURRING | ONE_TIME
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+}
+
+// =====================
+// FATURAS (SPRINT 2)
+// =====================
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Invoice {
+  id             String        @id @default(cuid())
+  client         Client        @relation(fields: [clientId], references: [id])
+  clientId       String
+  description    String
+  amount         Float
+  dueDate        DateTime
+  status         InvoiceStatus @default(PENDING)
+  paidAt         DateTime?
+  referenceMonth String?       // ex: "2026-04"
+  origin         String        @default("manual") // manual | auto_recurring | auto_conversion
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([clientId, status])
+  @@index([dueDate, status])
 }

@@ -387,5 +387,13 @@ export async function convertLead(req: Request, res: Response): Promise<void> {
 
   logger.info({ leadId, clientId: client.id }, 'Lead convertido em cliente')
 
+  // SPRINT 2: gera fatura de conversão automaticamente
+  try {
+    const { createConversionInvoice } = await import('../services/invoice.service.js')
+    await createConversionInvoice(client.id)
+  } catch (err) {
+    logger.warn({ err, clientId: client.id }, 'Falha ao criar fatura de conversão — cliente criado sem fatura')
+  }
+
   res.status(201).json({ client, leadId })
 }

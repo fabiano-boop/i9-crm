@@ -13,6 +13,7 @@ import { scheduleBackupJob, startBackupWorker } from './backup.job.js'
 import { scheduleCadenceJob, startCadenceWorker } from './cadence.job.js'
 import { scheduleAlertJobs, startAlertWorkers } from './alerts.job.js'
 import { scheduleClientReportJobs, startClientReportWorkers } from './clientReport.job.js'
+import { scheduleInvoiceJobs, startInvoiceWorkers } from './invoice.job.js'
 
 async function safeSchedule(name: string, fn: () => void | Promise<void>): Promise<void> {
   try {
@@ -25,22 +26,24 @@ async function safeSchedule(name: string, fn: () => void | Promise<void>): Promi
 
 export async function startAllWorkers(): Promise<void> {
   await Promise.allSettled([
-    safeSchedule('sheets-worker', () => startSheetsWorker()),
-    safeSchedule('backup-worker', () => startBackupWorker()),
-    safeSchedule('cadence-worker', () => startCadenceWorker()),
-    safeSchedule('alert-workers', () => startAlertWorkers()),
-    safeSchedule('client-report-workers', () => startClientReportWorkers()),
+    safeSchedule('sheets-worker',        () => startSheetsWorker()),
+    safeSchedule('backup-worker',        () => startBackupWorker()),
+    safeSchedule('cadence-worker',       () => startCadenceWorker()),
+    safeSchedule('alert-workers',        () => startAlertWorkers()),
+    safeSchedule('client-report-workers',() => startClientReportWorkers()),
+    safeSchedule('invoice-workers',      () => startInvoiceWorkers()),  // SPRINT 2
   ])
   logger.info('Inicializacao de workers concluida')
 }
 
 export async function scheduleAllJobs(): Promise<void> {
   await Promise.allSettled([
-    safeSchedule('daily-sync', () => scheduleDailySync()),
-    safeSchedule('backup-job', () => scheduleBackupJob()),
-    safeSchedule('cadence-job', () => scheduleCadenceJob()),
-    safeSchedule('alert-jobs', () => scheduleAlertJobs()),
-    safeSchedule('client-report-jobs', () => scheduleClientReportJobs()),
+    safeSchedule('daily-sync',        () => scheduleDailySync()),
+    safeSchedule('backup-job',        () => scheduleBackupJob()),
+    safeSchedule('cadence-job',       () => scheduleCadenceJob()),
+    safeSchedule('alert-jobs',        () => scheduleAlertJobs()),
+    safeSchedule('client-report-jobs',() => scheduleClientReportJobs()),
+    safeSchedule('invoice-jobs',      () => scheduleInvoiceJobs()),     // SPRINT 2
   ])
   logger.info('Agendamento de jobs concluido')
 }
