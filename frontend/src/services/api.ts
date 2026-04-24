@@ -487,8 +487,32 @@ export interface DashboardAnalytics {
   generatedAt: string
 }
 
+// SPRINT 1: Interface do endpoint financeiro
+export interface FinancialAnalytics {
+  summary: {
+    totalRevenue: number
+    totalCost: number
+    totalProfit: number
+    avgMargin: number
+    activeClients: number
+  }
+  clients: {
+    id: string
+    businessName: string
+    revenue: number
+    cost: number
+    profit: number
+    margin: number
+    package: string | null
+    niche: string | null
+  }[]
+  generatedAt: string
+}
+
 export const analyticsApi = {
-  dashboard: () => api.get<DashboardAnalytics>('/analytics/dashboard'),
+  dashboard:  () => api.get<DashboardAnalytics>('/analytics/dashboard'),
+  // SPRINT 1: Endpoint financeiro com custo interno real
+  financial:  () => api.get<FinancialAnalytics>('/analytics/financial'),
 }
 
 // ===== CLIENTS =====

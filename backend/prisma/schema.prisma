@@ -345,6 +345,7 @@ model Client {
   status        String         @default("active") // active | paused | churned
   origin              String         @default("lead")   // lead | referral | manual
   leadId              String?
+  internalCost        Float?         @default(0)        // custo interno mensal (hora + ferramentas)
   notes               String?
   cancelledAt         DateTime?
   cancellationReason  String?

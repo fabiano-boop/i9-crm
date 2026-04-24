@@ -96,4 +96,50 @@ router.get('/dashboard', asyncHandler(async (_req: Request, res: Response): Prom
   })
 }))
 
+/**
+ * GET /api/analytics/financial
+ * SPRINT 1: Retorna métricas financeiras reais por cliente.
+ * Inclui receita, custo interno, lucro e margem — alimenta o Dashboard.
+ */
+router.get('/financial', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const clients = await prisma.client.findMany({
+    where: { status: 'active' },
+    select: {
+      id: true,
+      businessName: true,
+      monthlyValue: true,
+      internalCost: true,
+      package: true,
+      niche: true,
+      startDate: true,
+    },
+    orderBy: { monthlyValue: 'desc' },
+  })
+
+  const totalRevenue  = clients.reduce((s, c) => s + (c.monthlyValue  ?? 0), 0)
+  const totalCost     = clients.reduce((s, c) => s + (c.internalCost  ?? 0), 0)
+  const totalProfit   = totalRevenue - totalCost
+  const avgMargin     = totalRevenue > 0 ? (totalProfit / totalRevenue) * 100 : 0
+
+  const clientDetails = clients.map(c => {
+    const revenue = c.monthlyValue  ?? 0
+    const cost    = c.internalCost  ?? 0
+    const profit  = revenue - cost
+    const margin  = revenue > 0 ? (profit / revenue) * 100 : 0
+    return { ...c, revenue, cost, profit, margin: parseFloat(margin.toFixed(1)) }
+  })
+
+  res.json({
+    summary: {
+      totalRevenue,
+      totalCost,
+      totalProfit,
+      avgMargin: parseFloat(avgMargin.toFixed(1)),
+      activeClients: clients.length,
+    },
+    clients: clientDetails,
+    generatedAt: new Date().toISOString(),
+  })
+}))
+
 export default router

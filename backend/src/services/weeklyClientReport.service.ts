@@ -230,18 +230,40 @@ export async function generateReport(clientId: string, weekStart: Date): Promise
   const weekEnd = new Date(weekStart)
   weekEnd.setDate(weekEnd.getDate() + 6)
 
-  // Métricas: nesta versão usamos valores zerados (a integrar com dados reais do WhatsApp/CRM)
-  const metrics = {
-    messagesSent: 0,
-    messagesRead: 0,
-    repliesReceived: 0,
-    newLeadsGen: 0,
-    appointmentsSet: 0,
-    conversionRate: 0,
-  }
+  // ── SPRINT 1: Métricas reais puxadas do banco ────────────────────────────
+  // Busca interações do lead de origem do cliente na semana
+  const weekInteractions = client.leadId
+    ? await prisma.interaction.findMany({
+        where: {
+          leadId: client.leadId,
+          createdAt: { gte: weekStart, lte: weekEnd },
+        },
+      })
+    : []
 
-  const readRate = metrics.messagesSent > 0
-    ? parseFloat(((metrics.messagesRead / metrics.messagesSent) * 100).toFixed(1))
+  const messagesSent    = weekInteractions.filter(i => i.direction === 'OUT').length
+  const messagesRead    = weekInteractions.filter(i => i.direction === 'OUT' && i.type === 'WHATSAPP').length
+  const repliesReceived = weekInteractions.filter(i => i.direction === 'IN').length
+
+  // Novos leads prospectos gerados na semana
+  const newLeadsGen = await prisma.lead.count({
+    where: { importedAt: { gte: weekStart, lte: weekEnd } },
+  })
+
+  // Agendamentos: respostas IN com palavras de confirmação
+  const appointmentsSet = weekInteractions.filter(i =>
+    i.direction === 'IN' &&
+    /agend|confirm|ok\b|sim\b|pode|vou|topei/i.test(i.content ?? '')
+  ).length
+
+  const conversionRate = messagesSent > 0
+    ? parseFloat(((repliesReceived / messagesSent) * 100).toFixed(1))
+    : 0
+
+  const metrics = { messagesSent, messagesRead, repliesReceived, newLeadsGen, appointmentsSet, conversionRate }
+
+  const readRate = messagesSent > 0
+    ? parseFloat(((messagesRead / messagesSent) * 100).toFixed(1))
     : 0
 
   // Gerar conteúdo via Claude
@@ -324,39 +346,37 @@ export async function sendReport(reportId: string): Promise<void> {
     }
   }
 
-  // ── WhatsApp ──────────────────────────────────────────────────────────────
-  // [LEGADO Evolution API removido — substituído pelo Whapi]
-  // TODO: reimplementar envio de relatório via Whapi quando necessário.
-  /*
-  if (client.whatsapp && env.EVOLUTION_API_URL && env.EVOLUTION_API_KEY) {
+  // ── WhatsApp via Whapi ────────────────────────────────────────────────────
+  // SPRINT 1: Reimplementado usando Whapi (substituiu Evolution API)
+  if (client.whatsapp && env.WHAPI_TOKEN) {
     try {
       const pdfUrl = report.pdfPath
-        ? `${env.REPORTS_BASE_URL}/api/clients/${client.id}/reports/${reportId}/pdf`
+        ? `${env.REPORTS_BASE_URL}/api/reports/${reportId}/pdf`
         : null
 
       const message = buildWhatsAppMessage(client, report, readRate, pdfUrl)
 
-      const axios = (await import('axios')).default
-      await axios.post(
-        `${env.EVOLUTION_API_URL}/message/sendText/${env.EVOLUTION_INSTANCE_NAME}`,
-        { number: client.whatsapp, text: message },
-        { headers: { apikey: env.EVOLUTION_API_KEY, 'Content-Type': 'application/json' } },
-      )
+      const { sendText } = await import('./whatsapp.service.js')
+      const sent = await sendText(client.whatsapp, message)
 
-      await prisma.weeklyReport.update({ where: { id: reportId }, data: { sentViaWhatsApp: true, sentAt: new Date() } })
-      logger.info({ reportId, whatsapp: client.whatsapp }, 'Relatório enviado por WhatsApp')
+      if (sent) {
+        await prisma.weeklyReport.update({
+          where: { id: reportId },
+          data: { sentViaWhatsApp: true, sentAt: new Date() },
+        })
+        logger.info({ reportId, whatsapp: client.whatsapp }, 'Relatório enviado por WhatsApp via Whapi')
+      } else {
+        logger.warn({ reportId, whatsapp: client.whatsapp }, 'Falha ao enviar relatório por WhatsApp via Whapi')
+      }
     } catch (err) {
       logger.warn({ err, reportId }, 'Falha ao enviar relatório por WhatsApp')
     }
   }
-  */
 }
 
-// ─── Helpers de mensagem ──────────────────────────────────────────────────────
+// ─── Helper: mensagem WhatsApp do relatório ───────────────────────────────────
+// SPRINT 1: Reativado para uso com Whapi (sendText de whatsapp.service.ts)
 
-// [LEGADO Evolution API] — helper usado apenas pelo envio via WhatsApp que foi
-// removido. Mantido comentado para eventual reativação via Whapi.
-/*
 function buildWhatsAppMessage(
   client: Client,
   report: WeeklyReport,
@@ -379,10 +399,8 @@ function buildWhatsAppMessage(
   }
 
   lines.push('', 'Qualquer dúvida, é só chamar! 💚')
-
   return lines.join('\n')
 }
-*/
 
 function buildEmailHtml(client: Client, report: WeeklyReport, readRate: string): string {
   return `<!DOCTYPE html>

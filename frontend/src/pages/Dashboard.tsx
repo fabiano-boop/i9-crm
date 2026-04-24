@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { leadsApi, campaignsApi, alertsApi, type Lead, type Campaign, type OpportunityAlert } from '../services/api'
+import { leadsApi, campaignsApi, alertsApi, analyticsApi, type Lead, type Campaign, type OpportunityAlert, type FinancialAnalytics } from '../services/api'
 import ScoreBadge from '../components/shared/ScoreBadge'
 
 const STAGE_LABELS: Record<string, string> = {
@@ -9,24 +9,27 @@ const STAGE_LABELS: Record<string, string> = {
 const STAGE_ORDER = ['new', 'contacted', 'replied', 'proposal', 'negotiation', 'closed', 'lost']
 
 export default function Dashboard() {
-  const [hotLeads, setHotLeads]     = useState<Lead[]>([])
-  const [allLeads, setAllLeads]     = useState<Lead[]>([])
-  const [campaigns, setCampaigns]   = useState<Campaign[]>([])
-  const [topAlerts, setTopAlerts]   = useState<OpportunityAlert[]>([])
-  const [totalLeads, setTotalLeads] = useState(0)
-  const [totalHot, setTotalHot]     = useState(0)
-  const [totalWarm, setTotalWarm]   = useState(0)
-  const [loading, setLoading]       = useState(true)
+  const [hotLeads, setHotLeads]       = useState<Lead[]>([])
+  const [allLeads, setAllLeads]       = useState<Lead[]>([])
+  const [campaigns, setCampaigns]     = useState<Campaign[]>([])
+  const [topAlerts, setTopAlerts]     = useState<OpportunityAlert[]>([])
+  const [totalLeads, setTotalLeads]   = useState(0)
+  const [totalHot, setTotalHot]       = useState(0)
+  const [totalWarm, setTotalWarm]     = useState(0)
+  const [loading, setLoading]         = useState(true)
+  // SPRINT 1: estado financeiro
+  const [financial, setFinancial]     = useState<FinancialAnalytics['summary'] | null>(null)
 
   useEffect(() => {
     async function load() {
       try {
-        const [allRes, hotRes, warmRes, campaignRes, alertsRes] = await Promise.all([
+        const [allRes, hotRes, warmRes, campaignRes, alertsRes, financialRes] = await Promise.all([
           leadsApi.list({ limit: 200 }),
           leadsApi.list({ classification: 'HOT', limit: 5 }),
           leadsApi.list({ classification: 'WARM', limit: 1 }),
           campaignsApi.list({ limit: 10 }),
           alertsApi.list({ isDismissed: false, isRead: false, limit: 5 }),
+          analyticsApi.financial().catch(() => null), // SPRINT 1: não bloqueia se falhar
         ])
         setTotalLeads(allRes.data.meta.total)
         setTotalHot(hotRes.data.meta.total)
@@ -35,6 +38,8 @@ export default function Dashboard() {
         setAllLeads(allRes.data.data)
         setCampaigns(campaignRes.data.data)
         setTopAlerts(alertsRes.data.data)
+        // SPRINT 1: salva resumo financeiro
+        if (financialRes?.data?.summary) setFinancial(financialRes.data.summary)
       } finally {
         setLoading(false)
       }
@@ -50,6 +55,14 @@ export default function Dashboard() {
   const maxCount = Math.max(...Object.values(stageCounts), 1)
 
   const coldLeads = totalLeads - totalHot - totalWarm
+
+  // SPRINT 1: Taxa de conversão real = fechados / total com estágio definido
+  const closedCount = stageCounts['closed'] ?? 0
+  const activeInPipeline = STAGE_ORDER.filter(s => s !== 'lost').reduce((s, k) => s + (stageCounts[k] ?? 0), 0)
+  const conversionPct = activeInPipeline > 0 ? Math.round((closedCount / activeInPipeline) * 100) : 0
+
+  // SPRINT 1: formatação de moeda
+  const fmt = (v: number) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v)
 
   return (
     <div className="p-6" style={{ background: '#061422', minHeight: '100%' }}>
@@ -70,11 +83,13 @@ export default function Dashboard() {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KPICard icon="👥" label="Total de Leads"  value={totalLeads} sub="cadastrados no CRM"    dotColor="#1A6EFF" loading={loading} />
-        <KPICard icon="🔥" label="Leads HOT"       value={totalHot}   sub="prontos para fechar"   dotColor="#FF5050" loading={loading} />
-        <KPICard icon="🌤" label="Leads WARM"      value={totalWarm}  sub="em nutrição"            dotColor="#F59E0B" loading={loading} />
-        <KPICard icon="❄️" label="COLD"            value={coldLeads}  sub="precisam de atenção"   dotColor="#00C8E8" loading={loading} />
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+        <KPICard icon="👥" label="Total de Leads"  value={totalLeads}      sub="cadastrados no CRM"    dotColor="#1A6EFF" loading={loading} />
+        <KPICard icon="🔥" label="Leads HOT"       value={totalHot}        sub="prontos para fechar"   dotColor="#FF5050" loading={loading} />
+        <KPICard icon="🌤" label="Leads WARM"      value={totalWarm}       sub="em nutrição"            dotColor="#F59E0B" loading={loading} />
+        <KPICard icon="❄️" label="COLD"            value={coldLeads}       sub="precisam de atenção"   dotColor="#00C8E8" loading={loading} />
+        {/* SPRINT 1: Conversão real */}
+        <KPICard icon="🎯" label="Conversão"       value={conversionPct}   sub="fechados / pipeline"   dotColor="#10b981" loading={loading} suffix="%" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -206,6 +221,52 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* SPRINT 1: Resumo Financeiro — alimentado pelo /analytics/financial */}
+      {(financial || loading) && (
+        <div
+          className="rounded-xl overflow-hidden mb-6"
+          style={{ background: '#0B1F30', border: '1px solid rgba(0,200,232,0.14)' }}
+        >
+          <div
+            className="px-5 py-4 flex items-center justify-between"
+            style={{ borderBottom: '1px solid rgba(0,200,232,0.10)' }}
+          >
+            <h2 className="font-semibold" style={{ color: '#E8F4F8' }}>💰 Resumo Financeiro</h2>
+            <a href="/clients" className="text-xs hover:underline" style={{ color: '#00C8E8' }}>
+              Ver clientes →
+            </a>
+          </div>
+          {loading ? (
+            <div className="py-6 text-center text-sm" style={{ color: '#7EAFC4' }}>Carregando...</div>
+          ) : financial ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-0">
+              {[
+                { label: 'Receita MRR',     value: fmt(financial.totalRevenue), color: '#10b981', icon: '📈' },
+                { label: 'Custo Interno',   value: fmt(financial.totalCost),    color: '#f97316', icon: '💸' },
+                { label: 'Lucro Líquido',   value: fmt(financial.totalProfit),  color: financial.totalProfit >= 0 ? '#10b981' : '#ef4444', icon: '🏦' },
+                { label: 'Margem Média',    value: `${financial.avgMargin}%`,   color: financial.avgMargin >= 50 ? '#10b981' : financial.avgMargin >= 20 ? '#f59e0b' : '#ef4444', icon: '📊' },
+              ].map((item, i) => (
+                <div
+                  key={i}
+                  className="px-5 py-4 flex items-center gap-3"
+                  style={{ borderRight: i < 3 ? '1px solid rgba(0,200,232,0.08)' : 'none' }}
+                >
+                  <span className="text-xl">{item.icon}</span>
+                  <div>
+                    <p className="text-lg font-bold" style={{ color: item.color, fontFamily: 'monospace' }}>
+                      {item.value}
+                    </p>
+                    <p className="text-xs mt-0.5" style={{ color: '#7EAFC4' }}>{item.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-6 text-center text-sm" style={{ color: '#7EAFC4' }}>Sem dados financeiros</div>
+          )}
+        </div>
+      )}
+
       {/* Janelas de Oportunidade */}
       {(loading || topAlerts.length > 0) && (
         <div
@@ -306,8 +367,8 @@ export default function Dashboard() {
 }
 
 // ── KPI Card ──────────────────────────────────────────────
-function KPICard({ icon, label, value, sub, dotColor, loading }: {
-  icon: string; label: string; value: number; sub: string; dotColor: string; loading: boolean
+function KPICard({ icon, label, value, sub, dotColor, loading, suffix = '' }: {
+  icon: string; label: string; value: number; sub: string; dotColor: string; loading: boolean; suffix?: string
 }) {
   return (
     <div
@@ -335,7 +396,7 @@ function KPICard({ icon, label, value, sub, dotColor, loading }: {
         className="text-3xl font-bold"
         style={{ color: '#00C8E8', fontFamily: 'monospace' }}
       >
-        {loading ? '—' : value}
+        {loading ? '—' : `${value}${suffix}`}
       </p>
       <p className="text-sm font-medium mt-1" style={{ color: '#E8F4F8' }}>{label}</p>
       <p className="text-xs mt-0.5" style={{ color: '#7EAFC4' }}>{sub}</p>
