@@ -6,6 +6,7 @@ import { logger } from '../utils/logger.js'
 import { wsEvents } from './websocket.service.js'
 import { normalizePhone } from './duplicate.service.js'
 import { getSegmentoByNiche } from '../data/marketIntelligence.js'
+import { autoAddLeadToNicheCampaign } from './nicheAutoCampaign.service.js'
 import type { DigitalLevel, Classification, LeadStatus } from '@prisma/client'
 
 // Mapeamento das colunas da planilha i9 Cowork → Lead
@@ -266,7 +267,8 @@ export async function syncFromSheets(): Promise<SyncResult> {
         }
 
         // Lead novo — inserir
-        await prisma.lead.create({ data: leadData })
+        const newLead = await prisma.lead.create({ data: leadData })
+        autoAddLeadToNicheCampaign(newLead.id, newLead.niche).catch(() => null)
         result.rowsImported++
       } else {
         // Lead existente — atualizar (preserva notes manuais se não vier da planilha)

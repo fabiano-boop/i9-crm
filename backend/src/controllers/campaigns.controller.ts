@@ -4,6 +4,7 @@ import { prisma } from '../config/database.js'
 import { getPaginationParams, buildPaginatedResult } from '../utils/pagination.js'
 import { logger } from '../utils/logger.js'
 import { sendCampaignWhatsApp } from '../services/whatsapp.service.js'
+import { autoCreateCampaignsByNiche } from '../services/nicheAutoCampaign.service.js'
 
 const campaignSchema = z.object({
   name: z.string().min(1),
@@ -192,6 +193,27 @@ export async function pauseCampaign(req: Request, res: Response): Promise<void> 
   const id = req.params.id as string
   await prisma.campaign.update({ where: { id }, data: { status: 'PAUSED' } })
   res.json({ message: 'Campanha pausada' })
+}
+
+// POST /api/campaigns/auto-create-by-niche
+export async function autoCreateByNiche(req: Request, res: Response): Promise<void> {
+  const user = (req as Request & { user?: { sub: string } }).user
+  const adminId = user?.sub
+  if (!adminId) {
+    res.status(401).json({ error: 'Não autorizado', code: 'UNAUTHORIZED' })
+    return
+  }
+
+  const results = await autoCreateCampaignsByNiche(adminId)
+
+  if (results.length === 0) {
+    res.json({ message: 'Nenhum lead com nicho mapeado encontrado', campaigns: [] })
+    return
+  }
+
+  const totalLeads = results.reduce((s, r) => s + r.leadsAdded, 0)
+  logger.info({ groups: results.length, totalLeads }, 'auto-create-by-niche concluído')
+  res.json({ campaigns: results, totalLeads })
 }
 
 // GET /api/campaigns/:id/leads-engaged

@@ -2,6 +2,7 @@ import axios from 'axios';
 import { PrismaClient } from '@prisma/client';
 import { calculateLeadScore, getLeadTemperature } from '../utils/leadScorer.js';
 import { appendLeadToSheet } from './sheets.service.js';
+import { autoAddLeadToNicheCampaign } from './nicheAutoCampaign.service.js';
 
 const prisma = new PrismaClient();
 
@@ -207,7 +208,10 @@ export async function runLeadScraper(): Promise<void> {
           reviewCount: place.userRatingCount || null,
         };
 
-        await prisma.lead.create({ data: leadData });
+        const createdLead = await prisma.lead.create({ data: leadData });
+
+        // Vincula automaticamente à campanha do grupo de nicho correspondente
+        autoAddLeadToNicheCampaign(createdLead.id, createdLead.niche).catch(() => null);
 
         // Adiciona nova linha no final da planilha (nunca sobrescreve)
         await appendLeadToSheet({

@@ -2,7 +2,7 @@ import { Router } from 'express'
 import {
   listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign,
   addLeadsToCampaign, removeLeadFromCampaign, getCampaignStats,
-  sendCampaign, pauseCampaign, getEngagedLeads,
+  sendCampaign, pauseCampaign, getEngagedLeads, autoCreateByNiche,
 } from '../controllers/campaigns.controller.js'
 import { requireAuth } from '../middleware/auth.js'
 import { asyncHandler } from '../middleware/asyncHandler.js'
@@ -12,6 +12,7 @@ router.use(requireAuth)
 
 router.get('/', asyncHandler(listCampaigns))
 router.post('/', asyncHandler(createCampaign))
+router.post('/auto-create-by-niche', asyncHandler(autoCreateByNiche))
 router.get('/:id', asyncHandler(getCampaign))
 router.put('/:id', asyncHandler(updateCampaign))
 router.delete('/:id', asyncHandler(deleteCampaign))
