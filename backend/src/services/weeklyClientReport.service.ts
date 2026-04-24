@@ -167,6 +167,29 @@ interface TemplateData {
   recommendations: string
   recommendationItems: string[]
   nextWeekPlan: string
+  // SPRINT 3.6: métricas orgânicas GA4 + Search Console
+  organicMetrics?: {
+    sessions: string; sessionsDelta: string; sessionsClass: string
+    users: string; usersDelta: string; usersClass: string
+    bounceRate: string; bounceDelta: string; bounceClass: string
+    hasSearchConsole: boolean
+    impressions?: string; clicks?: string; position?: string
+  }
+  // SPRINT 3.2: dados comparativos com semana anterior (ausente no primeiro relatório)
+  prevReport?: {
+    messagesSent: number
+    readRate: string
+    repliesReceived: number
+    appointmentsSet: number
+    deltaMessagesSent: string
+    deltaMessagesSentClass: string
+    deltaReadRate: string
+    deltaReadRateClass: string
+    deltaReplies: string
+    deltaRepliesClass: string
+    deltaAppointments: string
+    deltaAppointmentsClass: string
+  }
 }
 
 function buildTemplateData(
@@ -175,6 +198,8 @@ function buildTemplateData(
   weekEnd: Date,
   metrics: { messagesSent: number; messagesRead: number; repliesReceived: number; newLeadsGen: number; appointmentsSet: number; conversionRate: number },
   content: ReportContent,
+  prevWeekReport?: WeeklyReport | null,
+  organicMetrics?: TemplateData['organicMetrics'],
 ): TemplateData {
   const readRate = metrics.messagesSent > 0
     ? ((metrics.messagesRead / metrics.messagesSent) * 100).toFixed(1)
@@ -193,6 +218,36 @@ function buildTemplateData(
     .map((s) => s.trim())
     .filter(Boolean)
     .slice(0, 3)
+
+  // SPRINT 3.2: comparativo semana anterior
+  let prevReport: TemplateData['prevReport']
+  if (prevWeekReport) {
+    const prevReadRate = prevWeekReport.messagesSent > 0
+      ? ((prevWeekReport.messagesRead / prevWeekReport.messagesSent) * 100).toFixed(1)
+      : '0'
+
+    const fmtDelta = (cur: number, prev: number, suffix = '') => {
+      const d = cur - prev
+      return d > 0 ? `+${d}${suffix}` : `${d}${suffix}`
+    }
+    const deltaClass = (cur: number, prev: number) =>
+      cur > prev ? 'delta-up' : cur < prev ? 'delta-down' : 'delta-neutral'
+
+    prevReport = {
+      messagesSent:          prevWeekReport.messagesSent,
+      readRate:              prevReadRate,
+      repliesReceived:       prevWeekReport.repliesReceived,
+      appointmentsSet:       prevWeekReport.appointmentsSet,
+      deltaMessagesSent:     fmtDelta(metrics.messagesSent,    prevWeekReport.messagesSent),
+      deltaMessagesSentClass: deltaClass(metrics.messagesSent, prevWeekReport.messagesSent),
+      deltaReadRate:         fmtDelta(parseFloat(readRate),    parseFloat(prevReadRate), '%'),
+      deltaReadRateClass:    deltaClass(parseFloat(readRate),  parseFloat(prevReadRate)),
+      deltaReplies:          fmtDelta(metrics.repliesReceived, prevWeekReport.repliesReceived),
+      deltaRepliesClass:     deltaClass(metrics.repliesReceived, prevWeekReport.repliesReceived),
+      deltaAppointments:     fmtDelta(metrics.appointmentsSet, prevWeekReport.appointmentsSet),
+      deltaAppointmentsClass: deltaClass(metrics.appointmentsSet, prevWeekReport.appointmentsSet),
+    }
+  }
 
   return {
     businessName: client.businessName,
@@ -215,6 +270,8 @@ function buildTemplateData(
     recommendations: content.recommendations,
     recommendationItems,
     nextWeekPlan: content.nextWeekPlan,
+    prevReport,
+    organicMetrics,
   }
 }
 
@@ -231,15 +288,64 @@ export async function generateReport(clientId: string, weekStart: Date): Promise
   weekEnd.setDate(weekEnd.getDate() + 6)
 
   // ── SPRINT 1: Métricas reais puxadas do banco ────────────────────────────
-  // Busca interações do lead de origem do cliente na semana
-  const weekInteractions = client.leadId
-    ? await prisma.interaction.findMany({
-        where: {
-          leadId: client.leadId,
-          createdAt: { gte: weekStart, lte: weekEnd },
-        },
-      })
-    : []
+  // SPRINT 3.2: busca relatório anterior para comparativo
+  const [weekInteractionsRaw, prevWeekReport] = await Promise.all([
+    client.leadId
+      ? prisma.interaction.findMany({
+          where: { leadId: client.leadId, createdAt: { gte: weekStart, lte: weekEnd } },
+        })
+      : Promise.resolve([]),
+    prisma.weeklyReport.findFirst({
+      where: { clientId, weekStart: { lt: weekStart } },
+      orderBy: { weekStart: 'desc' },
+    }),
+  ])
+  const weekInteractions = weekInteractionsRaw
+
+  // SPRINT 3.6: tenta buscar métricas GA4 se cliente tiver conectado
+  let organicMetrics: TemplateData['organicMetrics']
+  if (client.ga4AccessToken && client.ga4PropertyId) {
+    try {
+      const { getMetrics, getSearchConsoleMetrics } = await import('./ga4.service.js')
+      const now   = new Date()
+      const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().slice(0, 10)
+      const end   = now.toISOString().slice(0, 10)
+
+      const g4 = await getMetrics(clientId, start, end)
+      const deltaStr = (cur: number, prev: number) => {
+        const d = cur - prev
+        return d > 0 ? `+${d.toLocaleString('pt-BR')}` : d.toLocaleString('pt-BR')
+      }
+      const deltaClass = (cur: number, prev: number) =>
+        cur > prev ? 'delta-up' : cur < prev ? 'delta-down' : ''
+
+      organicMetrics = {
+        sessions:     g4.sessions.toLocaleString('pt-BR'),
+        sessionsDelta: deltaStr(g4.sessions, g4.vs_previous.sessions),
+        sessionsClass: deltaClass(g4.sessions, g4.vs_previous.sessions),
+        users:        g4.activeUsers.toLocaleString('pt-BR'),
+        usersDelta:   deltaStr(g4.activeUsers, g4.vs_previous.activeUsers),
+        usersClass:   deltaClass(g4.activeUsers, g4.vs_previous.activeUsers),
+        bounceRate:   g4.bounceRate.toFixed(1),
+        bounceDelta:  deltaStr(
+          parseFloat(g4.bounceRate.toFixed(1)),
+          parseFloat(g4.vs_previous.bounceRate.toFixed(1)),
+        ),
+        bounceClass:  deltaClass(g4.vs_previous.bounceRate, g4.bounceRate), // inverted — lower bounce is better
+        hasSearchConsole: false,
+      }
+
+      if (client.searchConsoleUrl) {
+        const sc = await getSearchConsoleMetrics(clientId, start, end)
+        organicMetrics.hasSearchConsole = true
+        organicMetrics.impressions      = sc.impressions.toLocaleString('pt-BR')
+        organicMetrics.clicks           = sc.clicks.toLocaleString('pt-BR')
+        organicMetrics.position         = sc.position.toFixed(1)
+      }
+    } catch (err) {
+      logger.warn({ err, clientId }, 'GA4: falha ao buscar métricas para o relatório — seção orgânica omitida')
+    }
+  }
 
   const messagesSent    = weekInteractions.filter(i => i.direction === 'OUT').length
   const messagesRead    = weekInteractions.filter(i => i.direction === 'OUT' && i.type === 'WHATSAPP').length
@@ -271,7 +377,7 @@ export async function generateReport(clientId: string, weekStart: Date): Promise
 
   // Gerar HTML do relatório
   const template = compileTemplate()
-  const templateData = buildTemplateData(client, weekStart, weekEnd, metrics, content)
+  const templateData = buildTemplateData(client, weekStart, weekEnd, metrics, content, prevWeekReport, organicMetrics)
   const html = template(templateData)
 
   // Gerar PDF
@@ -348,23 +454,42 @@ export async function sendReport(reportId: string): Promise<void> {
 
   // ── WhatsApp via Whapi ────────────────────────────────────────────────────
   // SPRINT 1: Reimplementado usando Whapi (substituiu Evolution API)
+  // SPRINT 3.1: Adicionado envio de PDF como documento + registro de Interaction
   if (client.whatsapp && env.WHAPI_TOKEN) {
     try {
-      const pdfUrl = report.pdfPath
-        ? `${env.REPORTS_BASE_URL}/api/reports/${reportId}/pdf`
-        : null
+      const { sendText, sendDocument } = await import('./whatsapp.service.js')
+      const summary = buildWhatsAppMessage(client, report, readRate)
+      const textSent = await sendText(client.whatsapp, summary)
 
-      const message = buildWhatsAppMessage(client, report, readRate, pdfUrl)
+      let docSent = false
+      if (report.pdfPath && fs.existsSync(report.pdfPath)) {
+        const pdfBuffer = fs.readFileSync(report.pdfPath)
+        const monthYear = report.weekStart
+          .toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' })
+          .replace('/', '-')
+        docSent = await sendDocument(client.whatsapp, pdfBuffer, `Relatório_${monthYear}.pdf`)
+      }
 
-      const { sendText } = await import('./whatsapp.service.js')
-      const sent = await sendText(client.whatsapp, message)
-
-      if (sent) {
+      if (textSent) {
         await prisma.weeklyReport.update({
           where: { id: reportId },
           data: { sentViaWhatsApp: true, sentAt: new Date() },
         })
-        logger.info({ reportId, whatsapp: client.whatsapp }, 'Relatório enviado por WhatsApp via Whapi')
+
+        if (client.leadId) {
+          const monthLabel = report.weekStart.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' })
+          await prisma.interaction.create({
+            data: {
+              leadId: client.leadId,
+              type: 'WHATSAPP',
+              channel: 'whatsapp',
+              content: `Relatório ${monthLabel} enviado via WhatsApp${docSent ? ' (com PDF)' : ''}`,
+              direction: 'OUT',
+            },
+          })
+        }
+
+        logger.info({ reportId, whatsapp: client.whatsapp, docSent }, 'Relatório enviado por WhatsApp via Whapi')
       } else {
         logger.warn({ reportId, whatsapp: client.whatsapp }, 'Falha ao enviar relatório por WhatsApp via Whapi')
       }
@@ -375,31 +500,28 @@ export async function sendReport(reportId: string): Promise<void> {
 }
 
 // ─── Helper: mensagem WhatsApp do relatório ───────────────────────────────────
-// SPRINT 1: Reativado para uso com Whapi (sendText de whatsapp.service.ts)
+// SPRINT 3.1: Removido pdfUrl — PDF é enviado como documento separado pelo sendDocument()
 
 function buildWhatsAppMessage(
   client: Client,
   report: WeeklyReport,
   readRate: string,
-  pdfUrl: string | null,
 ): string {
-  const lines = [
-    `Olá, ${client.ownerName}! Seu relatório semanal da i9 está pronto 📊`,
+  const weekLabel = `${report.weekStart.toLocaleDateString('pt-BR')} a ${report.weekEnd.toLocaleDateString('pt-BR')}`
+  return [
+    `📊 *Relatório Semanal — ${client.businessName}*`,
     '',
-    `Semana de ${report.weekStart.toLocaleDateString('pt-BR')} a ${report.weekEnd.toLocaleDateString('pt-BR')}`,
+    `Olá, ${client.ownerName}! Confira os resultados da semana de ${weekLabel}:`,
     '',
     `✅ ${report.messagesSent} mensagens enviadas`,
     `👀 ${readRate}% taxa de leitura`,
     `💬 ${report.repliesReceived} respostas recebidas`,
     `🎯 ${report.appointmentsSet} agendamentos realizados`,
-  ]
-
-  if (pdfUrl) {
-    lines.push('', `📄 Relatório completo: ${pdfUrl}`)
-  }
-
-  lines.push('', 'Qualquer dúvida, é só chamar! 💚')
-  return lines.join('\n')
+    '',
+    'Segue o relatório completo em PDF 👆',
+    '',
+    'Qualquer dúvida, é só chamar! 💚',
+  ].join('\n')
 }
 
 function buildEmailHtml(client: Client, report: WeeklyReport, readRate: string): string {
@@ -506,11 +628,13 @@ export async function sendPendingWeeklyReports(): Promise<{ sent: number; errors
  * Retorna o HTML do relatório para servir como preview ou gerar PDF sob demanda.
  */
 export async function getReportHtml(reportId: string): Promise<string> {
-  const report = await prisma.weeklyReport.findUnique({
-    where: { id: reportId },
-    include: { client: true },
-  })
+  const report = await prisma.weeklyReport.findUnique({ where: { id: reportId }, include: { client: true } })
   if (!report) throw new Error(`Relatório não encontrado: ${reportId}`)
+
+  const prev = await prisma.weeklyReport.findFirst({
+    where: { clientId: report.clientId, weekStart: { lt: report.weekStart } },
+    orderBy: { weekStart: 'desc' },
+  })
 
   const content: ReportContent = {
     highlights: report.highlights ?? '',
@@ -532,6 +656,7 @@ export async function getReportHtml(reportId: string): Promise<string> {
       conversionRate: report.conversionRate,
     },
     content,
+    prev,
   )
 
   return template(templateData)

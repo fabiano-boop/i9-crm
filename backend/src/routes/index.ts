@@ -14,6 +14,9 @@ import clientsRouter from './clients.js'
 import reportsRouter from './reports.js'
 import analyticsRouter from './analytics.js'
 import whatsappRouter from './whatsapp.js'
+import settingsRouter from './settings.js'
+import servicesRouter from './services.js'
+import integrationsRouter from './integrations.js'
 
 const router = Router()
 
@@ -32,6 +35,9 @@ router.use('/clients', clientsRouter)   // Clientes ativos + relatórios semanai
 router.use('/reports', reportsRouter)   // Ações diretas sobre relatórios
 router.use('/analytics', analyticsRouter) // Dashboard de métricas
 router.use('/whatsapp', whatsappRouter)   // Status da conexão WhatsApp
+router.use('/settings', settingsRouter)   // Configurações do usuário (meta MRR)
+router.use('/services', servicesRouter)       // Serviços/produtos + histórico de vendas
+router.use('/integrations', integrationsRouter) // GA4 + Search Console OAuth + métricas
 
 // ROTA DE TESTE — scraper manual
 router.get('/scraper/test', async (_req, res) => {

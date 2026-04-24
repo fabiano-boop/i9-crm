@@ -257,6 +257,79 @@
       line-height: 1.6;
     }
 
+    /* ── ORGANIC METRICS ── */
+    .organic-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .organic-card {
+      background: #f8fafc;
+      border-radius: 10px;
+      padding: 16px 14px;
+      text-align: center;
+      border: 1.5px solid #e8edf2;
+    }
+
+    .organic-value {
+      font-size: 26px;
+      font-weight: 800;
+      color: #1a6eff;
+      line-height: 1;
+    }
+
+    .organic-label {
+      font-size: 11px;
+      color: #7a8ba0;
+      margin-top: 5px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .organic-delta {
+      font-size: 11px;
+      margin-top: 3px;
+    }
+
+    .delta-up   { color: #1D9E75; }
+    .delta-down { color: #e53e3e; }
+
+    /* ── COMPARISON TABLE ── */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .compare-table th {
+      background: #f8fafc;
+      font-size: 12px;
+      color: #7a8ba0;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      padding: 10px 14px;
+      text-align: left;
+      border-bottom: 2px solid #e8edf2;
+      font-weight: 700;
+    }
+
+    .compare-table td {
+      padding: 10px 14px;
+      font-size: 13px;
+      color: #2d3748;
+      border-bottom: 1px solid #f0f0f5;
+    }
+
+    .compare-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .delta-up      { color: #1D9E75; font-weight: 700; }
+    .delta-down    { color: #e53e3e; font-weight: 700; }
+    .delta-neutral { color: #7a8ba0; }
+
     /* ── FOOTER ── */
     .footer {
       background: #1a1a2e;
@@ -378,6 +451,93 @@
         </div>
       </div>
     </div>
+
+    <!-- RESULTADOS ORGÂNICOS (GA4 + Search Console) -->
+    {{#if organicMetrics}}
+    <div class="section">
+      <div class="section-title">📊 Resultados Orgânicos (Google)</div>
+
+      <p style="font-size:12px;color:#7a8ba0;margin-bottom:14px;">Google Analytics 4 — mês atual</p>
+      <div class="organic-grid">
+        <div class="organic-card">
+          <div class="organic-value">{{organicMetrics.sessions}}</div>
+          <div class="organic-label">Sessões</div>
+          <div class="organic-delta {{organicMetrics.sessionsClass}}">{{organicMetrics.sessionsDelta}} vs mês ant.</div>
+        </div>
+        <div class="organic-card">
+          <div class="organic-value">{{organicMetrics.users}}</div>
+          <div class="organic-label">Usuários</div>
+          <div class="organic-delta {{organicMetrics.usersClass}}">{{organicMetrics.usersDelta}} vs mês ant.</div>
+        </div>
+        <div class="organic-card">
+          <div class="organic-value">{{organicMetrics.bounceRate}}%</div>
+          <div class="organic-label">Taxa de Rejeição</div>
+          <div class="organic-delta {{organicMetrics.bounceClass}}">{{organicMetrics.bounceDelta}} vs mês ant.</div>
+        </div>
+      </div>
+
+      {{#if organicMetrics.hasSearchConsole}}
+      <p style="font-size:12px;color:#7a8ba0;margin:14px 0 10px;">Search Console — mês atual</p>
+      <div class="organic-grid">
+        <div class="organic-card">
+          <div class="organic-value">{{organicMetrics.impressions}}</div>
+          <div class="organic-label">Impressões</div>
+        </div>
+        <div class="organic-card">
+          <div class="organic-value">{{organicMetrics.clicks}}</div>
+          <div class="organic-label">Cliques</div>
+        </div>
+        <div class="organic-card">
+          <div class="organic-value">#{{organicMetrics.position}}</div>
+          <div class="organic-label">Posição Média</div>
+        </div>
+      </div>
+      {{/if}}
+    </div>
+    {{/if}}
+
+    <!-- COMPARATIVO SEMANA ANTERIOR -->
+    {{#if prevReport}}
+    <div class="section">
+      <div class="section-title">Comparativo vs Semana Anterior</div>
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>Métrica</th>
+            <th>Semana Ant.</th>
+            <th>Semana Atual</th>
+            <th>Variação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Mensagens Enviadas</td>
+            <td>{{prevReport.messagesSent}}</td>
+            <td>{{messagesSent}}</td>
+            <td class="{{prevReport.deltaMessagesSentClass}}">{{prevReport.deltaMessagesSent}}</td>
+          </tr>
+          <tr>
+            <td>Taxa de Leitura</td>
+            <td>{{prevReport.readRate}}%</td>
+            <td>{{readRate}}%</td>
+            <td class="{{prevReport.deltaReadRateClass}}">{{prevReport.deltaReadRate}}</td>
+          </tr>
+          <tr>
+            <td>Respostas Recebidas</td>
+            <td>{{prevReport.repliesReceived}}</td>
+            <td>{{repliesReceived}}</td>
+            <td class="{{prevReport.deltaRepliesClass}}">{{prevReport.deltaReplies}}</td>
+          </tr>
+          <tr>
+            <td>Agendamentos</td>
+            <td>{{prevReport.appointmentsSet}}</td>
+            <td>{{appointmentsSet}}</td>
+            <td class="{{prevReport.deltaAppointmentsClass}}">{{prevReport.deltaAppointments}}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    {{/if}}
 
     <!-- DESTAQUES -->
     {{#if highlights}}

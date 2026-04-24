@@ -142,4 +142,124 @@ router.get('/financial', asyncHandler(async (_req: Request, res: Response): Prom
   })
 }))
 
+/**
+ * GET /api/analytics/saas
+ * SPRINT 3.3: Métricas SaaS — MRR, Churn Rate, LTV e NRR do mês atual.
+ * NRR = (mrrStart + expansionMrr - contractionMrr - churnedMrr) / mrrStart * 100
+ */
+router.get('/saas', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const now = new Date()
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+
+  const [activeClients, clientsAtMonthStart, churnedThisMonth] = await Promise.all([
+    prisma.client.findMany({
+      where: { status: 'active' },
+      select: { monthlyValue: true },
+    }),
+    // Clientes ativos no início do mês corrente (existiam antes e não cancelaram antes)
+    prisma.client.findMany({
+      where: {
+        startDate: { lt: currentMonthStart },
+        OR: [{ cancelledAt: null }, { cancelledAt: { gte: currentMonthStart } }],
+      },
+      select: { monthlyValue: true },
+    }),
+    // Clientes que churned neste mês
+    prisma.client.findMany({
+      where: { status: 'churned', cancelledAt: { gte: currentMonthStart } },
+      select: { monthlyValue: true },
+    }),
+  ])
+
+  const mrr        = activeClients.reduce((s, c) => s + (c.monthlyValue ?? 0), 0)
+  const mrrStart   = clientsAtMonthStart.reduce((s, c) => s + (c.monthlyValue ?? 0), 0)
+  const churnedMrr = churnedThisMonth.reduce((s, c) => s + (c.monthlyValue ?? 0), 0)
+
+  // Expansion e contraction não são rastreados (campo único monthlyValue sem histórico)
+  const expansionMrr    = 0
+  const contractionMrr  = 0
+
+  const nrr = mrrStart > 0
+    ? parseFloat(((mrrStart + expansionMrr - contractionMrr - churnedMrr) / mrrStart * 100).toFixed(1))
+    : 100
+
+  const churnRate = mrrStart > 0
+    ? parseFloat((churnedMrr / mrrStart * 100).toFixed(1))
+    : 0
+
+  const activeCount     = activeClients.length
+  const avgMonthlyValue = activeCount > 0 ? mrr / activeCount : 0
+
+  // LTV = ARPU / churn mensal (se churn = 0, usa estimativa de 24 meses)
+  const avgLtv = churnRate > 0
+    ? parseFloat((avgMonthlyValue / (churnRate / 100)).toFixed(0))
+    : parseFloat((avgMonthlyValue * 24).toFixed(0))
+
+  res.json({
+    mrr:              parseFloat(mrr.toFixed(2)),
+    mrrStart:         parseFloat(mrrStart.toFixed(2)),
+    churnedMrr:       parseFloat(churnedMrr.toFixed(2)),
+    expansionMrr,
+    contractionMrr,
+    nrr,
+    churnRate,
+    avgLtv,
+    activeClients:    activeCount,
+  })
+}))
+
+/**
+ * GET /api/analytics/comparison
+ * SPRINT 3.2: Compara mês atual vs mês anterior — MRR, leads, deals, receita.
+ */
+router.get('/comparison', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const now = new Date()
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const prevMonthStart    = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+  const prevMonthEnd      = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999)
+
+  const [
+    currentClients,
+    prevClients,
+    currentLeads,
+    prevLeads,
+    currentDeals,
+    prevDeals,
+  ] = await Promise.all([
+    prisma.client.findMany({ where: { status: 'active' }, select: { monthlyValue: true } }),
+    prisma.client.findMany({
+      where: {
+        startDate: { lte: prevMonthEnd },
+        OR: [{ cancelledAt: null }, { cancelledAt: { gt: prevMonthEnd } }],
+      },
+      select: { monthlyValue: true },
+    }),
+    prisma.lead.count({ where: { importedAt: { gte: currentMonthStart } } }),
+    prisma.lead.count({ where: { importedAt: { gte: prevMonthStart, lte: prevMonthEnd } } }),
+    prisma.lead.count({ where: { pipelineStage: 'closed', updatedAt: { gte: currentMonthStart } } }),
+    prisma.lead.count({ where: { pipelineStage: 'closed', updatedAt: { gte: prevMonthStart, lte: prevMonthEnd } } }),
+  ])
+
+  const currentMrr = currentClients.reduce((s, c) => s + (c.monthlyValue ?? 0), 0)
+  const prevMrr    = prevClients.reduce((s, c) => s + (c.monthlyValue ?? 0), 0)
+
+  function calcDelta(cur: number, prev: number) {
+    const value = parseFloat((cur - prev).toFixed(2))
+    const percent = prev > 0 ? parseFloat(((Math.abs(cur - prev) / prev) * 100).toFixed(1)) : 0
+    const direction: 'up' | 'down' | 'neutral' = value > 0 ? 'up' : value < 0 ? 'down' : 'neutral'
+    return { value, percent, direction }
+  }
+
+  res.json({
+    current:  { mrr: currentMrr, leads: currentLeads, deals: currentDeals, revenue: currentMrr },
+    previous: { mrr: prevMrr,    leads: prevLeads,    deals: prevDeals,    revenue: prevMrr },
+    deltas: {
+      mrr:     calcDelta(currentMrr,    prevMrr),
+      leads:   calcDelta(currentLeads,  prevLeads),
+      deals:   calcDelta(currentDeals,  prevDeals),
+      revenue: calcDelta(currentMrr,    prevMrr),
+    },
+  })
+}))
+
 export default router

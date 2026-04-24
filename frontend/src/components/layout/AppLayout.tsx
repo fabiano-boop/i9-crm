@@ -4,7 +4,8 @@ import { useAuthStore } from '../../stores/authStore'
 import { useWebSocket, type WSEvent } from '../../hooks/useWebSocket'
 import { useToast } from '../shared/ToastProvider'
 import AlertsBadge from '../shared/AlertsBadge'
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { alertsApi } from '../../services/api'
 
 function useNotifications(token: string | null) {
   const { addToast } = useToast()
@@ -78,6 +79,41 @@ function useNotifications(token: string | null) {
   useWebSocket(token, handleEvent)
 }
 
+// SPRINT 3.4: badge de alertas inteligentes na topbar
+function SmartAlertsBadge() {
+  const [count, setCount] = useState(0)
+
+  useEffect(() => {
+    async function fetchCount() {
+      try {
+        const { data } = await alertsApi.smart()
+        setCount(data.length)
+      } catch { /* ignore */ }
+    }
+    fetchCount()
+    const timer = setInterval(fetchCount, 5 * 60 * 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  if (count === 0) return null
+  return (
+    <a
+      href="/dashboard"
+      className="relative p-2 rounded-lg"
+      title={`${count} alerta${count > 1 ? 's' : ''} inteligente${count > 1 ? 's' : ''} pendente${count > 1 ? 's' : ''}`}
+      style={{ color: '#fb923c' }}
+    >
+      <span className="text-lg">⚡</span>
+      <span
+        className="absolute -top-0.5 -right-0.5 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center"
+        style={{ background: '#f97316' }}
+      >
+        {count > 9 ? '9+' : count}
+      </span>
+    </a>
+  )
+}
+
 function AppLayoutInner() {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null
   useNotifications(token)
@@ -92,12 +128,14 @@ function AppLayoutInner() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Topbar */}
         <header
-          className="h-12 flex items-center justify-end px-4 shrink-0"
+          className="h-12 flex items-center justify-end px-4 gap-2 shrink-0"
           style={{
             background: '#061422',
             fontFamily: "'Inter', sans-serif",
           }}
         >
+          {/* SPRINT 3.4: badge de alertas inteligentes */}
+          <SmartAlertsBadge />
           <AlertsBadge token={token} />
         </header>
 

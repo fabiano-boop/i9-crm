@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
-import { leadsApi, campaignsApi, alertsApi, analyticsApi, type Lead, type Campaign, type OpportunityAlert, type FinancialAnalytics } from '../services/api'
+import { leadsApi, campaignsApi, alertsApi, analyticsApi, settingsApi, type Lead, type Campaign, type OpportunityAlert, type FinancialAnalytics, type DashboardComparison, type SmartAlert } from '../services/api'
 import ScoreBadge from '../components/shared/ScoreBadge'
+import MetricDelta from '../components/shared/MetricDelta'
 
 const STAGE_LABELS: Record<string, string> = {
   new: 'Novo', contacted: 'Contatado', replied: 'Respondeu',
@@ -19,17 +20,25 @@ export default function Dashboard() {
   const [loading, setLoading]         = useState(true)
   // SPRINT 1: estado financeiro
   const [financial, setFinancial]     = useState<FinancialAnalytics['summary'] | null>(null)
+  const [comparison, setComparison]   = useState<DashboardComparison | null>(null)
+  // SPRINT 3.4: alertas inteligentes + meta MRR
+  const [smartAlerts, setSmartAlerts] = useState<SmartAlert[]>([])
+  const [mrrGoal, setMrrGoal]         = useState(0)
 
   useEffect(() => {
     async function load() {
       try {
-        const [allRes, hotRes, warmRes, campaignRes, alertsRes, financialRes] = await Promise.all([
+        const [allRes, hotRes, warmRes, campaignRes, alertsRes, financialRes, comparisonRes, smartRes, settingsRes] = await Promise.all([
           leadsApi.list({ limit: 200 }),
           leadsApi.list({ classification: 'HOT', limit: 5 }),
           leadsApi.list({ classification: 'WARM', limit: 1 }),
           campaignsApi.list({ limit: 10 }),
           alertsApi.list({ isDismissed: false, isRead: false, limit: 5 }),
-          analyticsApi.financial().catch(() => null), // SPRINT 1: não bloqueia se falhar
+          analyticsApi.financial().catch(() => null),
+          analyticsApi.comparison().catch(() => null),
+          // SPRINT 3.4: alertas inteligentes + meta MRR
+          alertsApi.smart().catch(() => null),
+          settingsApi.get().catch(() => null),
         ])
         setTotalLeads(allRes.data.meta.total)
         setTotalHot(hotRes.data.meta.total)
@@ -38,8 +47,10 @@ export default function Dashboard() {
         setAllLeads(allRes.data.data)
         setCampaigns(campaignRes.data.data)
         setTopAlerts(alertsRes.data.data)
-        // SPRINT 1: salva resumo financeiro
         if (financialRes?.data?.summary) setFinancial(financialRes.data.summary)
+        if (comparisonRes?.data) setComparison(comparisonRes.data)
+        if (smartRes?.data) setSmartAlerts(smartRes.data)
+        if (settingsRes?.data?.monthlyMrrGoal) setMrrGoal(settingsRes.data.monthlyMrrGoal)
       } finally {
         setLoading(false)
       }
@@ -82,14 +93,65 @@ export default function Dashboard() {
         </div>
       </div>
 
+      {/* SPRINT 3.4: Painel de alertas inteligentes */}
+      {!loading && smartAlerts.length > 0 && (
+        <div
+          className="rounded-xl overflow-hidden mb-6"
+          style={{ background: '#0B1F30', border: '1px solid rgba(249,115,22,0.25)' }}
+        >
+          <div className="px-5 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(249,115,22,0.12)' }}>
+            <h2 className="font-semibold text-sm" style={{ color: '#E8F4F8' }}>
+              ⚡ Alertas Inteligentes
+              <span className="ml-2 text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: 'rgba(249,115,22,0.2)', color: '#fb923c' }}>
+                {smartAlerts.length}
+              </span>
+            </h2>
+            <span className="text-xs" style={{ color: '#7EAFC4' }}>Requer atenção</span>
+          </div>
+          <div>
+            {smartAlerts.slice(0, 6).map((alert, i) => {
+              const icons: Record<string, string> = { DEAL_STALLED: '🔄', OVERDUE_INVOICE: '💸', HOT_LEAD_IDLE: '🔥' }
+              return (
+                <div
+                  key={i}
+                  className="px-5 py-3 flex items-center gap-3"
+                  style={{ borderBottom: i < Math.min(smartAlerts.length, 6) - 1 ? '1px solid rgba(0,200,232,0.06)' : 'none' }}
+                >
+                  <span className="text-lg shrink-0">{icons[alert.type]}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate" style={{ color: '#E8F4F8' }}>{alert.entityName}</p>
+                    <p className="text-xs truncate" style={{ color: '#7EAFC4' }}>{alert.message}</p>
+                  </div>
+                  <span
+                    className="text-xs font-semibold shrink-0 px-2 py-0.5 rounded-full"
+                    style={alert.severity === 'high'
+                      ? { background: 'rgba(239,68,68,0.15)', color: '#f87171' }
+                      : { background: 'rgba(234,179,8,0.15)', color: '#fbbf24' }}
+                  >
+                    {alert.severity === 'high' ? 'Alta' : 'Média'}
+                  </span>
+                  <a
+                    href={alert.actionUrl}
+                    className="text-xs font-semibold shrink-0 px-3 py-1 rounded-lg transition-colors"
+                    style={{ background: 'rgba(0,200,232,0.1)', color: '#00C8E8' }}
+                  >
+                    Ver →
+                  </a>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-        <KPICard icon="👥" label="Total de Leads"  value={totalLeads}      sub="cadastrados no CRM"    dotColor="#1A6EFF" loading={loading} />
-        <KPICard icon="🔥" label="Leads HOT"       value={totalHot}        sub="prontos para fechar"   dotColor="#FF5050" loading={loading} />
-        <KPICard icon="🌤" label="Leads WARM"      value={totalWarm}       sub="em nutrição"            dotColor="#F59E0B" loading={loading} />
-        <KPICard icon="❄️" label="COLD"            value={coldLeads}       sub="precisam de atenção"   dotColor="#00C8E8" loading={loading} />
+        <KPICard icon="👥" label="Total de Leads"  value={totalLeads}    sub="cadastrados no CRM"    dotColor="#1A6EFF" loading={loading} delta={comparison?.deltas.leads} />
+        <KPICard icon="🔥" label="Leads HOT"       value={totalHot}      sub="prontos para fechar"   dotColor="#FF5050" loading={loading} />
+        <KPICard icon="🌤" label="Leads WARM"      value={totalWarm}     sub="em nutrição"            dotColor="#F59E0B" loading={loading} />
+        <KPICard icon="❄️" label="COLD"            value={coldLeads}     sub="precisam de atenção"   dotColor="#00C8E8" loading={loading} />
         {/* SPRINT 1: Conversão real */}
-        <KPICard icon="🎯" label="Conversão"       value={conversionPct}   sub="fechados / pipeline"   dotColor="#10b981" loading={loading} suffix="%" />
+        <KPICard icon="🎯" label="Conversão"       value={conversionPct} sub="fechados / pipeline"   dotColor="#10b981" loading={loading} suffix="%" delta={comparison?.deltas.deals ? { ...comparison.deltas.deals, percent: comparison.deltas.deals.value } : undefined} showPercent={false} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -241,10 +303,10 @@ export default function Dashboard() {
           ) : financial ? (
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-0">
               {[
-                { label: 'Receita MRR',     value: fmt(financial.totalRevenue), color: '#10b981', icon: '📈' },
-                { label: 'Custo Interno',   value: fmt(financial.totalCost),    color: '#f97316', icon: '💸' },
-                { label: 'Lucro Líquido',   value: fmt(financial.totalProfit),  color: financial.totalProfit >= 0 ? '#10b981' : '#ef4444', icon: '🏦' },
-                { label: 'Margem Média',    value: `${financial.avgMargin}%`,   color: financial.avgMargin >= 50 ? '#10b981' : financial.avgMargin >= 20 ? '#f59e0b' : '#ef4444', icon: '📊' },
+                { label: 'Receita MRR',   value: fmt(financial.totalRevenue), color: '#10b981', icon: '📈', delta: comparison?.deltas.mrr },
+                { label: 'Custo Interno', value: fmt(financial.totalCost),    color: '#f97316', icon: '💸', delta: undefined },
+                { label: 'Lucro Líquido', value: fmt(financial.totalProfit),  color: financial.totalProfit >= 0 ? '#10b981' : '#ef4444', icon: '🏦', delta: undefined },
+                { label: 'Margem Média',  value: `${financial.avgMargin}%`,   color: financial.avgMargin >= 50 ? '#10b981' : financial.avgMargin >= 20 ? '#f59e0b' : '#ef4444', icon: '📊', delta: undefined },
               ].map((item, i) => (
                 <div
                   key={i}
@@ -256,6 +318,12 @@ export default function Dashboard() {
                     <p className="text-lg font-bold" style={{ color: item.color, fontFamily: 'monospace' }}>
                       {item.value}
                     </p>
+                    {/* SPRINT 3.2: delta MRR no card Receita */}
+                    {item.delta && (
+                      <div className="mt-0.5">
+                        <MetricDelta value={item.delta.percent} direction={item.delta.direction} />
+                      </div>
+                    )}
                     <p className="text-xs mt-0.5" style={{ color: '#7EAFC4' }}>{item.label}</p>
                   </div>
                 </div>
@@ -264,6 +332,27 @@ export default function Dashboard() {
           ) : (
             <div className="py-6 text-center text-sm" style={{ color: '#7EAFC4' }}>Sem dados financeiros</div>
           )}
+          {/* SPRINT 3.4: barra de progresso meta de MRR */}
+          {financial && mrrGoal > 0 && !loading && (() => {
+            const progress = Math.min((financial.totalRevenue / mrrGoal) * 100, 100)
+            const barColor = progress >= 100 ? '#10b981' : progress >= 75 ? '#eab308' : '#00C8E8'
+            return (
+              <div className="px-5 py-3" style={{ borderTop: '1px solid rgba(0,200,232,0.08)' }}>
+                <div className="flex items-center justify-between text-xs mb-1.5" style={{ color: '#7EAFC4' }}>
+                  <span>
+                    {fmt(financial.totalRevenue)} / Meta {fmt(mrrGoal)}
+                  </span>
+                  <span className="font-bold" style={{ color: barColor }}>{progress.toFixed(0)}%</span>
+                </div>
+                <div className="h-2 rounded-full overflow-hidden" style={{ background: 'rgba(0,200,232,0.08)' }}>
+                  <div
+                    className="h-full rounded-full transition-all"
+                    style={{ width: `${progress}%`, background: barColor, boxShadow: `0 0 8px ${barColor}55` }}
+                  />
+                </div>
+              </div>
+            )
+          })()}
         </div>
       )}
 
@@ -367,8 +456,11 @@ export default function Dashboard() {
 }
 
 // ── KPI Card ──────────────────────────────────────────────
-function KPICard({ icon, label, value, sub, dotColor, loading, suffix = '' }: {
+function KPICard({ icon, label, value, sub, dotColor, loading, suffix = '', delta, showPercent = true }: {
   icon: string; label: string; value: number; sub: string; dotColor: string; loading: boolean; suffix?: string
+  // SPRINT 3.2: delta opcional para comparativo mês anterior
+  delta?: { value: number; percent: number; direction: 'up' | 'down' | 'neutral' }
+  showPercent?: boolean
 }) {
   return (
     <div
@@ -398,6 +490,11 @@ function KPICard({ icon, label, value, sub, dotColor, loading, suffix = '' }: {
       >
         {loading ? '—' : `${value}${suffix}`}
       </p>
+      {delta && !loading && (
+        <div className="mt-0.5">
+          <MetricDelta value={showPercent ? delta.percent : delta.value} direction={delta.direction} showPercent={showPercent} />
+        </div>
+      )}
       <p className="text-sm font-medium mt-1" style={{ color: '#E8F4F8' }}>{label}</p>
       <p className="text-xs mt-0.5" style={{ color: '#7EAFC4' }}>{sub}</p>
     </div>

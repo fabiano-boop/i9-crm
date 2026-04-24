@@ -18,6 +18,7 @@ import {
   LogOut,
   ChevronDown,
   ChevronRight,
+  Package,
 } from 'lucide-react'
 
 export default function Sidebar() {
@@ -26,7 +27,7 @@ export default function Sidebar() {
   const [dupCount, setDupCount]         = useState(0)
   const [handoffCount, setHandoffCount] = useState(0)
   const [clientsOpen, setClientsOpen]   = useState(
-    () => location.pathname.startsWith('/clients') || location.pathname === '/market-intelligence'
+    () => location.pathname.startsWith('/clients') || location.pathname === '/market-intelligence' || location.pathname.startsWith('/services')
   )
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function Sidebar() {
   }, [])
 
   useEffect(() => {
-    if (location.pathname.startsWith('/clients') || location.pathname === '/market-intelligence') {
+    if (location.pathname.startsWith('/clients') || location.pathname === '/market-intelligence' || location.pathname.startsWith('/services')) {
       setClientsOpen(true)
     }
   }, [location.pathname])
@@ -176,6 +177,18 @@ export default function Sidebar() {
               >
                 <UserPlus size={13} strokeWidth={1.8} />
                 Novo cliente
+              </NavLink>
+
+              <NavLink
+                to="/services"
+                className="flex items-center gap-2 pl-9 pr-3 py-2 rounded-lg text-sm transition-all"
+                style={({ isActive }) => ({
+                  color:      isActive ? '#00E5C8' : '#7EAFC4',
+                  background: isActive ? 'rgba(0,229,200,0.08)' : 'transparent',
+                })}
+              >
+                <Package size={13} strokeWidth={1.8} />
+                Serviços
               </NavLink>
 
               <NavLink

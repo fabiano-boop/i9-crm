@@ -16,6 +16,8 @@ import ClientDetail from './pages/Clients/ClientDetail'
 import NewClient from './pages/Clients/NewClient'
 import ClientEdit from './pages/Clients/ClientEdit'
 import MarketIntelligence from './pages/MarketIntelligence'
+import ServiceList from './pages/Services/ServiceList'
+import ServiceDetail from './pages/Services/ServiceDetail'
 
 // Guard que redireciona para /login se não autenticado
 function ProtectedRoutes() {
@@ -74,6 +76,9 @@ export default function App() {
           <Route path="/clients/:id/edit" element={<ClientEdit />} />
           {/* Intel. de Mercado */}
           <Route path="/market-intelligence" element={<MarketIntelligence />} />
+          {/* Serviços */}
+          <Route path="/services" element={<ServiceList />} />
+          <Route path="/services/:id" element={<ServiceDetail />} />
         </Route>
       </Route>
     </Routes>

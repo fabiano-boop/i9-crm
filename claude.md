@@ -1,429 +1,281 @@
-# CLAUDE.md — i9 CRM · Sprint 1: Fundação de Conversão
-# Semanas 1–3 · 5 entregas · Execute após o CRM base estar rodando
+# CLAUDE.md — i9 CRM · Sprint 3: Crescimento
+# Semanas 5–6 · 6 entregas · Requer Sprints 1 e 2 concluídos
+
+## REGRA CRÍTICA
+Mantenha INTEGRALMENTE a estrutura de código e design existente.
+Nunca reescrever do zero, nunca mudar design — apenas adicionar/corrigir
+dentro do padrão já estabelecido.
 
 ## CONTEXTO
-Você está evoluindo o i9 CRM, já construído conforme o CLAUDE.md principal.
-O backend roda em Node.js + Express + Prisma + PostgreSQL + Redis (BullMQ).
-O frontend usa React 18 + Vite + Shadcn/ui + Tailwind.
-Não recrie o projeto — evolua o código existente.
+Sprint 1 corrigiu a base (conversão, CPL, custo interno, APIs de anúncios).
+Sprint 2 automatizou (faturas automáticas, recorrência, agendamento de relatório, Maya nas Integrações).
+Sprint 3 escala o produto: relatório no WhatsApp, comparativos, NRR, metas, histórico e GA4.
 
-## REGRAS GERAIS DESTE SPRINT
-- Sempre rode `npx prisma migrate dev --name ` após alterar o schema
-- Sempre adicione variáveis novas ao .env.example com comentário explicativo
-- Mantenha TypeScript strict — nenhum `any` sem justificativa
-- Todos os jobs BullMQ devem ter onFailed com log estruturado (Pino)
-- Testes mínimos: ao menos um teste de integração por endpoint novo (Jest + Supertest)
-- Commits semânticos: feat:, fix:, chore:, test:
+## PRÉ-REQUISITOS
+- Sprints 1 e 2 concluídos e em produção
+- Whapi (Maya) funcionando e testado
+- Google Ads + Meta Ads integrados (Sprint 1)
+- Relatório PDF gerado e enviado via email (Sprint 2)
+- GA4: projeto Google Cloud com Analytics Data API e Search Console API habilitadas
+- OAuth2 credentials para GA4 (pode reusar o mesmo projeto do Calendar se já existir)
+
+## NOVAS VARIÁVEIS NO .ENV.EXAMPLE
+GA4_CLIENT_ID=               # mesmo projeto OAuth do Google Calendar
+GA4_CLIENT_SECRET=
+GA4_REDIRECT_URI=https://i9-crm-production.up.railway.app/api/integrations/ga4/callback
+SEARCH_CONSOLE_REDIRECT_URI=https://i9-crm-production.up.railway.app/api/integrations/search-console/callback
 
 ## ORDEM DE IMPLEMENTAÇÃO
 Execute exatamente nesta ordem. Confirme "ok, próximo" após cada etapa.
 
 ---
 
-## ETAPA 1 — 2FA com TOTP + Audit Log (3–4 dias)
+## ETAPA 3.1 — Relatório via WhatsApp (Maya) (2–3 dias)
 
-### 1.1 Schema Prisma — adicionar ao schema.prisma existente:
-```prisma
-model TwoFactorSecret {
-  id        String   @id @default(cuid())
-  userId    String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  secret    String
-  verified  Boolean  @default(false)
-  createdAt DateTime @default(now())
-}
+### Objetivo:
+Ao disparar o relatório mensal (agendado ou manual), além do PDF por email,
+o Maya envia o documento + resumo em texto pelo WhatsApp do cliente.
 
-model AuditLog {
-  id        String   @id @default(cuid())
-  userId    String?
-  userEmail String?
-  action    String
-  entity    String
-  entityId  String?
-  before    Json?
-  after     Json?
-  ip        String?
-  userAgent String?
-  createdAt DateTime @default(now())
+### Backend — alterar reportService.ts (NÃO reescrever, apenas adicionar):
+Após o bloco de envio por email (Resend), adicionar:
 
-  @@index([userId])
-  @@index([entity, entityId])
-  @@index([createdAt])
+```typescript
+// Envio via WhatsApp (Maya)
+if (client.whatsappPhone) {
+  const summary = buildReportSummary(reportData);
+  // 1. Enviar mensagem de texto com resumo executivo
+  await whapiService.sendMessage(client.whatsappPhone, summary);
+  // 2. Enviar o PDF como documento
+  await whapiService.sendDocument(client.whatsappPhone, pdfBuffer, `Relatório_${monthYear}.pdf`);
+  // 3. Registrar no histórico
+  await interactionService.create({
+    clientId: client.id,
+    type: 'REPORT_SENT',
+    channel: 'WHATSAPP',
+    content: `Relatório ${monthYear} enviado via WhatsApp`
+  });
 }
 ```
 
-### 1.2 Pacotes a instalar:
-```bash
-cd backend
-npm install speakeasy qrcode @types/speakeasy @types/qrcode
+### buildReportSummary(data): string
+Gerar texto curto com as 3 métricas mais relevantes:
+"📊 *Relatório {{mes}} — {{nomeCliente}}*
+
+✅ Leads gerados: {{leads}} ({{delta_leads}} vs mês anterior)
+💰 Investimento: R${{investimento}}
+🎯 CPL: R${{cpl}}
+
+Segue o relatório completo em PDF 👆"
+
+### whapiService — adicionar método sendDocument():
+```typescript
+async sendDocument(phone: string, buffer: Buffer, filename: string): Promise
+// POST para Whapi endpoint de envio de documento/arquivo
+// Usar multipart/form-data com o buffer do PDF
 ```
 
-### 1.3 Criar backend/src/services/twoFactor.service.ts:
-- generateSecret(userId): gera secret via speakeasy, salva na tabela TwoFactorSecret, retorna QR code como data URL
-- verifyToken(userId, token): valida TOTP com janela de 1 step, marca verified=true
-- isEnabled(userId): retorna boolean
-- disable(userId): deleta TwoFactorSecret
-
-### 1.4 Criar backend/src/middleware/auditLog.middleware.ts:
-- Middleware Express que intercepta POST, PUT, PATCH, DELETE
-- Extrai userId do JWT decoded
-- Captura req.body (sanitizado — remover passwordHash, secret)
-- Após res.json(), salva AuditLog assincronamente (não bloquear resposta)
-- Aplica em todas as rotas após autenticação
-
-### 1.5 Rotas a criar em backend/src/routes/auth.routes.ts (adicionar):
-```
-POST /api/auth/2fa/setup    → retorna { qrCode: string, secret: string }
-POST /api/auth/2fa/verify   → body: { token: string } → ativa 2FA
-POST /api/auth/2fa/validate → body: { token: string } → valida no login
-POST /api/auth/2fa/disable  → desativa 2FA do usuário autenticado
-GET  /api/auth/2fa/status   → retorna { enabled: boolean }
-```
-
-### 1.6 Alterar fluxo de login em auth.controller.ts:
-- Se usuário tem 2FA ativo: login retorna { requiresTwoFactor: true, tempToken: string }
-- tempToken é JWT com expiração de 5 min e claim { step: "2fa" }
-- POST /api/auth/2fa/validate valida tempToken + TOTP → retorna JWT definitivo
-
-### 1.7 Frontend — criar src/pages/Settings/TwoFactor.tsx:
-- Botão "Ativar 2FA" → exibe QR code + campo para digitar primeiro código
-- Após verificar: badge "2FA ativo" + botão desativar
-- Na tela de login: se requiresTwoFactor, exibir campo de 6 dígitos
-- Adicionar seção "2FA" em Settings page
-
-### 1.8 Frontend — criar src/pages/Settings/AuditLog.tsx:
-- Tabela com colunas: data/hora, usuário, ação, entidade, IP
-- Filtro por usuário, ação e período
-- Botão exportar CSV (client-side com Papa Parse)
-- Visível apenas para role=ADMIN
-
-### 1.9 Testes:
-- test/auth/twoFactor.test.ts: setup → verify → login flow → disable
-- test/middleware/auditLog.test.ts: verifica que mutações geram log
+### Verificação:
+- Disparar relatório manual e confirmar PDF chegando no WhatsApp
+- Interaction registrada no histórico do cliente
 
 ---
 
-## ETAPA 2 — Backup Automático Diário (2–3 dias)
+## ETAPA 3.2 — Comparativo mês anterior em cada métrica (2 dias)
 
-### 2.1 Pacotes:
-```bash
-npm install node-cron googleapis @google-cloud/storage
-# pg_dump já disponível se PostgreSQL está instalado
-```
-
-### 2.2 Variáveis novas no .env.example:
-```
-BACKUP_GOOGLE_DRIVE_FOLDER_ID=   # ID da pasta no Drive para backups
-BACKUP_RETENTION_DAYS=30         # dias de retenção
-GOOGLE_SERVICE_ACCOUNT_JSON=     # mesma do Sheets (reutilizar)
-```
-
-### 2.3 Criar backend/src/services/backup.service.ts:
-```typescript
-// Funções a implementar:
-async runBackup(): Promise<{ filename: string, sizeKb: number, driveFileId: string }>
-// 1. Executa: pg_dump $DATABASE_URL | gzip > /tmp/i9crm-YYYY-MM-DD-HHmm.sql.gz
-// 2. Faz upload para Google Drive via googleapis (stream, não carrega tudo na memória)
-// 3. Deleta arquivo local após upload bem-sucedido
-// 4. Registra em BackupLog (ver schema abaixo)
-// 5. Deleta backups no Drive com mais de BACKUP_RETENTION_DAYS dias
-
-async listBackups(): Promise
-async triggerManual(userId: string): Promise
-```
-
-### 2.4 Schema adicional:
-```prisma
-model BackupLog {
-  id          String   @id @default(cuid())
-  filename    String
-  sizeKb      Int
-  driveFileId String?
-  status      String   @default("success")
-  errorMsg    String?
-  triggeredBy String   @default("auto")
-  createdAt   DateTime @default(now())
-}
-```
-
-### 2.5 Criar job em backend/src/jobs/backup.job.ts:
-- BullMQ com cron "0 2 * * *" (toda madrugada às 02h)
-- onFailed: logar erro + enviar email de alerta via Resend para ADMIN_EMAIL
-- Adicionar ao worker principal
-
-### 2.6 Rotas (apenas ADMIN):
-```
-POST /api/admin/backup/trigger   → executa backup manual, retorna BackupLog
-GET  /api/admin/backup/history   → lista BackupLog com paginação
-```
-
-### 2.7 Frontend — adicionar card em Settings/Admin.tsx:
-- Último backup: data + tamanho
-- Botão "Executar backup agora"
-- Histórico de backups em tabela simples
-
----
-
-## ETAPA 3 — Cadência Automática de Follow-up (5–6 dias)
-
-### 3.1 Schema:
-```prisma
-model FollowUpSequence {
-  id          String           @id @default(cuid())
-  name        String
-  description String?
-  steps       Json             // FollowUpStep[]
-  isActive    Boolean          @default(true)
-  createdAt   DateTime         @default(now())
-  leadCadences LeadCadence[]
-}
-
-// steps JSON shape:
-// [{ day: number, channel: "whatsapp"|"email", templateKey: string, message: string }]
-
-model LeadCadence {
-  id              String           @id @default(cuid())
-  lead            Lead             @relation(fields: [leadId], references: [id])
-  leadId          String
-  sequence        FollowUpSequence @relation(fields: [sequenceId], references: [id])
-  sequenceId      String
-  currentStep     Int              @default(0)
-  status          String           @default("active") // active | paused | completed | cancelled
-  startedAt       DateTime         @default(now())
-  nextActionAt    DateTime?
-  pausedAt        DateTime?
-  pauseReason     String?
-  completedAt     DateTime?
-  updatedAt       DateTime         @updatedAt
-
-  @@unique([leadId, sequenceId])
-}
-```
-
-### 3.2 Criar backend/src/services/cadence.service.ts:
-```typescript
-// Funções:
-startCadence(leadId, sequenceId): Promise
-// - Valida se lead já está nesta sequência
-// - Cria LeadCadence com nextActionAt = now() + step[0].day * 24h
-
-pauseCadence(leadCadenceId, reason): Promise
-// - Atualiza status=paused, pausedAt=now(), pauseReason
-
-resumeCadence(leadCadenceId): Promise
-
-cancelCadence(leadCadenceId): Promise
-
-processStep(leadCadenceId): Promise
-// - Busca LeadCadence + Lead + próximo step
-// - Personaliza mensagem com variáveis do lead (nome, negocio, bairro, angulo)
-// - Envia via canal correto (whatsapp ou email service)
-// - Cria Interaction no histórico
-// - Avança currentStep ou marca completed se último step
-// - Define nextActionAt = now() + próximo step.day * 24h
-```
-
-### 3.3 Criar job backend/src/jobs/cadence.job.ts:
-- Cron "0 * * * *" (a cada hora)
-- Busca LeadCadence onde status=active AND nextActionAt <= now()
-- Para cada uma: adiciona à fila BullMQ "cadence-queue"
-- Worker processa com rate limit: max 30/min
-- onFailed: marcar step como erro, tentar novamente em 2h (max 3 tentativas)
-
-### 3.4 Auto-pausa ao receber resposta:
-- Sempre que Interaction é criada com direction="IN" E leadId:
-  - Buscar LeadCadences ativas do lead
-  - Pausar todas com pauseReason="lead_replied"
-  - Emitir WebSocket "cadence:paused" para o agente
-
-### 3.5 Sequências padrão a criar no seed:
-```typescript
-const sequences = [
-  {
-    name: "Sequência HOT — 5 contatos",
-    steps: [
-      { day: 1,  channel: "whatsapp", message: "{{angulo}}" },
-      { day: 3,  channel: "email",    message: "Email de apresentação i9 com case do nicho {{nicho}}" },
-      { day: 7,  channel: "whatsapp", message: "Follow-up: resultado que um cliente similar obteve" },
-      { day: 14, channel: "email",    message: "Proposta de diagnóstico gratuito para {{negocio}}" },
-      { day: 30, channel: "whatsapp", message: "Última tentativa: oferta especial de entrada" }
-    ]
-  },
-  {
-    name: "Sequência WARM — 3 contatos",
-    steps: [
-      { day: 1,  channel: "whatsapp", message: "{{angulo}}" },
-      { day: 7,  channel: "email",    message: "Conteúdo útil para {{nicho}} + convite para conversar" },
-      { day: 21, channel: "whatsapp", message: "Check-in simples: ainda faz sentido conversar?" }
-    ]
+### Backend — novo endpoint:
+GET /api/dashboard/comparison
+Response:
+```json
+{
+  "current": { "mrr": 4500, "leads": 28, "deals": 5, "revenue": 4500 },
+  "previous": { "mrr": 3800, "leads": 20, "deals": 3, "revenue": 3800 },
+  "deltas": {
+    "mrr": { "value": 700, "percent": 18.4, "direction": "up" },
+    "leads": { "value": 8, "percent": 40.0, "direction": "up" },
+    "deals": { "value": 2, "percent": 66.7, "direction": "up" },
+    "revenue": { "value": 700, "percent": 18.4, "direction": "up" }
   }
-]
-```
-
-### 3.6 Rotas:
-```
-GET    /api/cadences/sequences          → listar sequências disponíveis
-POST   /api/cadences/sequences          → criar nova sequência
-GET    /api/leads/:id/cadences          → cadências do lead
-POST   /api/leads/:id/cadences          → iniciar cadência { sequenceId }
-PUT    /api/leads/:id/cadences/:cid/pause
-PUT    /api/leads/:id/cadences/:cid/resume
-DELETE /api/leads/:id/cadences/:cid     → cancelar
-```
-
-### 3.7 Frontend:
-- LeadDetail: seção "Cadências ativas" com status de cada step (feito/pendente/falhou)
-- Modal "Iniciar cadência": selecionar sequência + prévia dos steps
-- Badge no kanban card: "Em cadência" quando tem LeadCadence ativa
-- Settings/Cadences.tsx: gerenciar sequências (CRUD)
-
----
-
-## ETAPA 4 — Alertas de Janela de Oportunidade (3–4 dias)
-
-### 4.1 Schema:
-```prisma
-model OpportunityAlert {
-  id          String   @id @default(cuid())
-  lead        Lead     @relation(fields: [leadId], references: [id])
-  leadId      String
-  type        String   // hot_engagement | cooling_lead | no_contact_week
-  title       String
-  description String
-  urgency     Int      @default(5)
-  isRead      Boolean  @default(false)
-  isDismissed Boolean  @default(false)
-  readAt      DateTime?
-  createdAt   DateTime @default(now())
-
-  @@index([isRead, isDismissed, createdAt])
 }
 ```
 
-### 4.2 Criar backend/src/services/opportunityAlert.service.ts:
+### Frontend — componente MetricDelta:
+```tsx
+// components/MetricDelta.tsx
+// Props: value: number, direction: 'up'|'down'|'neutral', showPercent?: boolean
+// Renderiza: ↑18% em verde ou ↓3% em vermelho
+// Usar em: todos os cards do Dashboard principal
+```
+
+Adicionar MetricDelta embaixo do valor principal em cada card do Dashboard.
+NÃO refatorar os cards existentes — apenas adicionar o componente abaixo.
+
+### Relatório PDF — adicionar seção "vs Mês Anterior":
+Tabela comparativa simples: Métrica | Mês Anterior | Mês Atual | Variação
+Posicionar após o bloco de métricas principais no template do PDF.
+
+---
+
+## ETAPA 3.3 — NRR no módulo Métricas SaaS (1–2 dias)
+
+### Cálculo:
+NRR = (MRR_inicio + expansion_MRR - contraction_MRR - churned_MRR) / MRR_inicio * 100
+
+Onde:
+- MRR_inicio = MRR total no início do mês
+- expansion_MRR = receita adicional de upgrades no mês
+- contraction_MRR = receita perdida por downgrades no mês
+- churned_MRR = MRR de clientes que cancelaram no mês
+
+### Backend — adicionar ao endpoint de métricas SaaS:
+GET /api/metrics/saas (já existe) — adicionar campo nrr ao response:
 ```typescript
-// Detecções a implementar:
-
-checkHotEngagement(leadId): Promise
-// - >= 2 TrackingEvents type='open' nas últimas 4h → urgency 9
-// - >= 1 TrackingEvent type='click' → urgency 10
-// - Criar OpportunityAlert se não criou nas últimas 12h para este lead/tipo
-
-checkCoolingLeads(): Promise
-// - Leads classification=HOT sem Interaction nos últimos 5 dias
-// - Criar alerta type='cooling_lead', urgency 7
-
-checkNoContactWeek(): Promise
-// - Leads classification=HOT ou WARM sem nenhum contato em 7+ dias
-// - Criar alerta type='no_contact_week', urgency 6
-
-generateMorningDigest(): Promise
-// - Top 5 alertas por urgency desc, createdAt desc
-// - Claude gera texto do digest em linguagem natural
-// - Envia via Resend para todos os agentes
+const nrr = mrrStart > 0
+  ? ((mrrStart + expansionMrr - contractionMrr - churnedMrr) / mrrStart) * 100
+  : 100;
 ```
 
-### 4.3 Jobs:
-- "alert-check-engagement": cron "0 * * * *" → checkHotEngagement para todos leads com TrackingEvent recente
-- "alert-check-cooling": cron "0 9 * * *" → checkCoolingLeads + checkNoContactWeek
-- "morning-digest": cron "0 8 * * 1-6" → generateMorningDigest (seg a sáb)
-
-### 4.4 Integração com tracking existente:
-- Em tracking.controller.ts, após registrar TrackingEvent type='click':
-  → chamar opportunityAlertService.checkHotEngagement(leadId)
-  → emitir WebSocket "lead:hot_alert" com dados do lead e alerta
-
-### 4.5 Rotas:
-```
-GET  /api/alerts              ?isRead, type, page, limit
-PUT  /api/alerts/:id/read
-PUT  /api/alerts/:id/dismiss
-GET  /api/alerts/unread-count → retorna { count: number }
-```
-
-### 4.6 Frontend:
-- Topbar: badge com unread-count, atualiza via polling a cada 60s ou WebSocket
-- Dropdown de alertas (últimos 10) com link para o lead
-- Dashboard: widget "Janelas de hoje" — top 5 alertas de urgência alta
-- Toast automático ao receber WebSocket "lead:hot_alert"
+### Frontend — adicionar card NRR à página de Métricas SaaS:
+- Card com valor em % (ex: 112%)
+- Linha de referência visual em 100% (break-even)
+- Cor verde se > 100%, amarelo se 90–100%, vermelho se < 90%
+- Tooltip: "NRR > 100% significa que sua base cresce mesmo sem novos clientes"
+- Posicionar ao lado dos cards MRR / Churn / LTV (NÃO reorganizar layout inteiro)
 
 ---
 
-## ETAPA 5 — Detecção e Merge de Duplicatas (3 dias)
+## ETAPA 3.4 — Dashboard: meta mensal + alertas inteligentes (2–3 dias)
 
-### 5.1 Criar backend/src/services/duplicate.service.ts:
+### 3.4.1 Meta mensal de MRR:
+
+Schema — adicionar ao model User (ou Settings):
+```prisma
+monthlyMrrGoal Float @default(0)
+```
+
+Endpoint PUT /api/settings/mrr-goal { goal: number }
+Endpoint GET /api/settings → incluir monthlyMrrGoal no response
+
+Frontend — Settings: campo "Meta de MRR Mensal (R$)" com save.
+Dashboard: barra de progresso abaixo do card MRR:
+```
+MRR Atual: R$4.500 / Meta: R$5.000 [======    ] 90%
+```
+
+### 3.4.2 Alertas inteligentes:
+
+Endpoint GET /api/alerts/smart retorna array de alertas:
 ```typescript
-// Funções:
-
-normalizePhone(phone: string): string
-// Remove: +55, espaços, traços, parênteses, código de país
-// Ex: "+55 (11) 98765-4321" → "11987654321"
-
-levenshteinDistance(a: string, b: string): number
-// Implementar algoritmo ou usar 'fast-levenshtein' npm
-
-similarityScore(a: string, b: string): number
-// Retorna 0-1. Threshold para duplicata: >= 0.85
-
-findDuplicates(): Promise
-// - Agrupa por telefone normalizado igual → duplicata certa
-// - Compara nomes: similaridade >= 0.85 E mesmo bairro → possível duplicata
-// - Retorna: [{ leads: Lead[], confidence: 'certain'|'possible' }]
-
-mergeLead(keepId: string, mergeIds: string[]): Promise
-// - Transfere: Interactions, CampaignLeads, TrackingEvents, LeadCadences
-// - Mescla campos: mantém keepId como base, preenche campos vazios com mergeIds
-// - Deleta mergeIds após transferência
-// - Registra AuditLog da operação de merge
+interface SmartAlert {
+  type: 'DEAL_STALLED' | 'OVERDUE_INVOICE' | 'HOT_LEAD_IDLE';
+  severity: 'high' | 'medium';
+  entityId: string;
+  entityName: string;
+  message: string;
+  daysSince: number;
+  actionUrl: string;
+}
 ```
 
-### 5.2 Integração com sync do Sheets:
-- Em sheets.service.ts, antes de criar novo lead:
-  → checar duplicata por telefone normalizado
-  → se encontrar: logar aviso, retornar lead existente (upsert em vez de insert)
+Queries a implementar:
+- DEAL_STALLED: deals em andamento sem updatedAt > 7 dias
+- OVERDUE_INVOICE: faturas com dueDate < hoje e status != PAID, vencidas > 5 dias
+- HOT_LEAD_IDLE: leads com classification=HOT sem Interaction nos últimos 48h
 
-### 5.3 Rotas:
-```
-GET  /api/leads/duplicates         → lista grupos de duplicatas
-POST /api/leads/merge              → body: { keepId, mergeIds }
-```
-
-### 5.4 Frontend — criar src/pages/Leads/Duplicates.tsx:
-- Acessível em /leads/duplicates
-- Grupos lado a lado: comparação de campos com diferenças destacadas
-- Botão "Manter este" define o keepId
-- Checkbox nos outros para selecionar mergeIds
-- Confirmação antes de executar o merge
-- Link na sidebar com badge de contagem de possíveis duplicatas
+Frontend — painel de alertas no Dashboard:
+- Exibir acima ou ao lado dos cards principais
+- Cada alerta com ícone, mensagem e botão "Ver" linkando para a entidade
+- Badge na topbar com contagem de alertas ativos
+- NÃO remover ou reorganizar cards existentes — adicionar o painel
 
 ---
 
-## DEFINIÇÃO DE "SPRINT 1 CONCLUÍDO"
+## ETAPA 3.5 — Histórico de vendas por serviço (1–2 dias)
 
-Antes de marcar o sprint como feito, verificar:
+### Backend:
+Endpoint GET /api/services/:id/sales-history:
+```json
+{
+  "serviceId": "...",
+  "serviceName": "Gestão de Tráfego",
+  "totalRevenue": 28500,
+  "totalContracts": 7,
+  "monthlyRevenue": [
+    { "month": "2025-10", "revenue": 1500 },
+    { "month": "2025-11", "revenue": 2000 },
+    ...
+  ],
+  "contracts": [
+    { "clientName": "Salão X", "startDate": "...", "monthlyValue": 497, "status": "ACTIVE" },
+    ...
+  ]
+}
+```
 
-[ ] 2FA funcionando do setup ao login com código TOTP
-[ ] Audit log registrando toda mutação com usuário e IP
-[ ] Backup rodando às 02h e subindo para Google Drive
-[ ] Cadência HOT e WARM funcionando com auto-pausa ao responder
-[ ] Alertas sendo gerados ao clicar em link rastreado
-[ ] Digest matinal enviado às 08h
-[ ] Detecção de duplicatas retornando grupos corretos
-[ ] Merge transferindo todas as interações sem perda de dados
-[ ] Todos os endpoints com autenticação JWT
-[ ] Nenhum `any` solto no TypeScript
-[ ] Migrations rodando sem erro em banco limpo
+Busca: deals com status=WON vinculados ao serviceId + faturas pagas.
+
+### Frontend — aba "Histórico" no ServiceDetail:
+- Gráfico de barras: receita por mês (últimos 12 meses)
+- Card de resumo: Total faturado | Contratos ativos | Ticket médio
+- Tabela: Cliente | Data início | Valor/mês | Status
+- Adicionar aba sem remover as abas existentes
 
 ---
 
-## COMANDO DE INÍCIO DO SPRINT 1
+## ETAPA 3.6 — Google Analytics 4 + Search Console (3–4 dias)
 
-Após salvar este arquivo como CLAUDE.md na raiz do i9-crm/:
-
-```bash
-claude "Leia o CLAUDE.md. Estamos iniciando o Sprint 1 do i9 CRM. \
-Execute a ETAPA 1 completa (2FA + Audit Log): crie o schema Prisma, \
-rode a migration, implemente o twoFactor.service.ts, o middleware de \
-auditLog e todas as rotas listadas. Me mostre o código antes de salvar \
-cada arquivo e aguarde minha confirmação."
+### 3.6.1 Schema — adicionar ao model Client:
+```prisma
+ga4PropertyId        String?
+ga4AccessToken       String?  // criptografado AES-256
+ga4RefreshToken      String?  // criptografado AES-256
+ga4TokenExpiresAt    DateTime?
+searchConsoleUrl     String?  // URL do site (ex: sc-domain:cliente.com.br)
 ```
+
+### 3.6.2 Serviço backend/src/services/ga4.service.ts:
+```typescript
+getAuthUrl(clientId): string
+  // scope: analytics.readonly + webmasters.readonly
+  // state: clientId
+
+handleCallback(code, state): Promise
+  // Salvar tokens criptografados no Client
+
+getMetrics(clientId, startDate, endDate): Promise
+  // GA4 Data API v1: sessions, activeUsers, bounceRate, newUsers
+  // Período: mês atual e mês anterior para comparativo
+
+getSearchConsoleMetrics(clientId, startDate, endDate): Promise
+  // Search Console API: impressions, clicks, ctr, position
+  // Por período mensal
+```
+
+### 3.6.3 Rotas:
+```
+GET  /api/integrations/ga4/auth/:clientId    → { authUrl }
+GET  /api/integrations/ga4/callback          → OAuth2 callback
+GET  /api/clients/:id/ga4/metrics            → { sessions, users, bounceRate, vs_previous }
+GET  /api/clients/:id/search-console/metrics → { impressions, clicks, ctr, position }
+DELETE /api/clients/:id/ga4                  → desconectar
+```
+
+### 3.6.4 Relatório PDF — adicionar seção "Orgânico":
+Após seção de Google Ads, inserir bloco:
+"📊 Resultados Orgânicos (Google)"
+- GA4: Sessões | Usuários | Taxa de Rejeição (com delta mês anterior)
+- Search Console: Impressões | Cliques | Posição Média
+
+### 3.6.5 Frontend — ClientDetail / Settings:
+- Card "Google Analytics 4" com botão conectar/desconectar
+- Ao conectar: campo para o GA4 Property ID (ex: 123456789)
+- Preview das métricas GA4 no perfil do cliente
+
+---
+
+## VERIFICAÇÃO FINAL
+Após cada etapa, confirme:
+[ ] TypeScript sem erros (tsc --noEmit)
+[ ] Migration rodou sem erros (se houve schema change)
+[ ] Variáveis novas documentadas no .env.example
+[ ] Funcionalidade testada com dados reais (não mock)
+[ ] Deploy no Railway/Vercel funcionando

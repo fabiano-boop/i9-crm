@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
-import { clientsApi, reportsApi, type Client, type WeeklyReport } from '../../services/api'
+import { clientsApi, reportsApi, integrationsApi, type Client, type WeeklyReport, type Ga4Metrics, type SearchConsoleMetrics } from '../../services/api'
 
 const PACKAGE_INFO: Record<string, { label: string; bg: string; color: string }> = {
   start:   { label: 'Start',   bg: 'rgba(100,116,139,0.2)', color: '#94a3b8' },
@@ -35,13 +35,26 @@ export default function ClientDetail() {
   const [notes, setNotes]             = useState('')
   const [savingNotes, setSavingNotes] = useState(false)
   const [feedback, setFeedback]       = useState('')
+  // SPRINT 3.6: GA4
+  const [ga4Metrics, setGa4Metrics]   = useState<Ga4Metrics | null>(null)
+  const [scMetrics, setScMetrics]     = useState<SearchConsoleMetrics | null>(null)
+  const [ga4PropertyInput, setGa4PropertyInput] = useState('')
+  const [scUrlInput, setScUrlInput]   = useState('')
+  const [ga4Connecting, setGa4Connecting] = useState(false)
 
   const loadData = useCallback(async () => {
     if (!id) return
     setLoading(true)
     try {
       const [clientRes, reportsRes] = await Promise.all([clientsApi.get(id), clientsApi.listReports(id, { limit: 20 })])
-      setClient(clientRes.data); setNotes(clientRes.data.notes ?? ''); setReports(reportsRes.data.reports)
+      const c = clientRes.data
+      setClient(c); setNotes(c.notes ?? ''); setReports(reportsRes.data.reports)
+      setGa4PropertyInput(c.ga4PropertyId ?? '')
+      setScUrlInput(c.searchConsoleUrl ?? '')
+      if (c.ga4AccessToken) {
+        integrationsApi.ga4Metrics(id).then(r => setGa4Metrics(r.data)).catch(() => null)
+        integrationsApi.scMetrics(id).then(r => setScMetrics(r.data)).catch(() => null)
+      }
     } finally { setLoading(false) }
   }, [id])
 
@@ -281,6 +294,148 @@ export default function ClientDetail() {
           </div>
         </div>
       </div>
+      {/* SPRINT 3.6: Google Analytics 4 + Search Console */}
+      <Ga4Card
+        clientId={id!}
+        isConnected={!!client.ga4AccessToken}
+        propertyId={ga4PropertyInput}
+        scUrl={scUrlInput}
+        ga4Metrics={ga4Metrics}
+        scMetrics={scMetrics}
+        connecting={ga4Connecting}
+        onPropertyChange={setGa4PropertyInput}
+        onScUrlChange={setScUrlInput}
+        onConnect={async () => {
+          if (!ga4PropertyInput.trim()) return
+          setGa4Connecting(true)
+          try {
+            await integrationsApi.ga4SaveProperty(id!, ga4PropertyInput.trim(), scUrlInput.trim() || undefined)
+            const { data } = await integrationsApi.ga4AuthUrl(id!)
+            window.location.href = data.authUrl
+          } catch { setFeedback('❌ Erro ao iniciar conexão GA4') }
+          finally { setGa4Connecting(false) }
+        }}
+        onDisconnect={async () => {
+          if (!confirm('Desconectar Google Analytics 4?')) return
+          await integrationsApi.ga4Disconnect(id!).catch(() => null)
+          setGa4Metrics(null); setScMetrics(null)
+          await loadData()
+        }}
+      />
+    </div>
+  )
+}
+
+// ── GA4 Card ──────────────────────────────────────────────────────────────────
+function Ga4Card({
+  clientId: _clientId, isConnected, propertyId, scUrl, ga4Metrics, scMetrics,
+  connecting, onPropertyChange, onScUrlChange, onConnect, onDisconnect,
+}: {
+  clientId: string; isConnected: boolean; propertyId: string; scUrl: string
+  ga4Metrics: Ga4Metrics | null; scMetrics: SearchConsoleMetrics | null; connecting: boolean
+  onPropertyChange: (v: string) => void; onScUrlChange: (v: string) => void
+  onConnect: () => void; onDisconnect: () => void
+}) {
+  const pctColor = (val: number, prev: number) => val > prev ? '#10b981' : val < prev ? '#ef4444' : '#7EAFC4'
+  const pctArrow = (val: number, prev: number) => val > prev ? '↑' : val < prev ? '↓' : '—'
+
+  const cardStyle: React.CSSProperties = { background: '#0B1F30', border: '1px solid rgba(0,200,232,0.14)', borderRadius: 12 }
+  const inputStyle: React.CSSProperties = { background: '#0F2840', border: '1px solid rgba(0,200,232,0.18)', color: '#E8F4F8', borderRadius: 8, padding: '8px 12px', fontSize: 13, outline: 'none', width: '100%' }
+
+  return (
+    <div style={cardStyle}>
+      <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(0,200,232,0.1)' }}>
+        <div className="flex items-center gap-2">
+          <span className="text-lg">📊</span>
+          <h2 className="font-semibold" style={{ color: '#E8F4F8' }}>Google Analytics 4</h2>
+          {isConnected && (
+            <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(16,185,129,0.15)', color: '#34d399' }}>
+              Conectado
+            </span>
+          )}
+        </div>
+        {isConnected && (
+          <button onClick={onDisconnect} className="text-xs hover:underline" style={{ color: '#f87171' }}>
+            Desconectar
+          </button>
+        )}
+      </div>
+
+      {!isConnected ? (
+        <div className="p-5 space-y-3">
+          <p className="text-sm" style={{ color: '#7EAFC4' }}>
+            Conecte o Google Analytics 4 para ver sessões, usuários e taxa de rejeição no relatório do cliente.
+          </p>
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: '#7EAFC4' }}>GA4 Property ID (ex: 123456789)</label>
+            <input
+              type="text"
+              value={propertyId}
+              onChange={e => onPropertyChange(e.target.value)}
+              placeholder="123456789"
+              style={inputStyle}
+            />
+          </div>
+          <div>
+            <label className="text-xs mb-1 block" style={{ color: '#7EAFC4' }}>Search Console URL (opcional, ex: sc-domain:cliente.com.br)</label>
+            <input
+              type="text"
+              value={scUrl}
+              onChange={e => onScUrlChange(e.target.value)}
+              placeholder="sc-domain:cliente.com.br"
+              style={inputStyle}
+            />
+          </div>
+          <button
+            onClick={onConnect}
+            disabled={connecting || !propertyId.trim()}
+            className="w-full py-2.5 rounded-lg text-sm font-semibold disabled:opacity-60"
+            style={{ background: 'linear-gradient(135deg, #00C8E8, #00E5C8)', color: '#061422' }}
+          >
+            {connecting ? 'Redirecionando para Google...' : '🔗 Conectar Google Analytics'}
+          </button>
+        </div>
+      ) : (
+        <div className="p-5">
+          {ga4Metrics ? (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+              {[
+                { label: 'Sessões',     cur: ga4Metrics.sessions,    prev: ga4Metrics.vs_previous.sessions,    fmt: (v: number) => v.toLocaleString('pt-BR') },
+                { label: 'Usuários',    cur: ga4Metrics.activeUsers,  prev: ga4Metrics.vs_previous.activeUsers,  fmt: (v: number) => v.toLocaleString('pt-BR') },
+                { label: 'Rejeição',   cur: ga4Metrics.bounceRate,   prev: ga4Metrics.vs_previous.bounceRate,   fmt: (v: number) => v.toFixed(1) + '%' },
+                { label: 'Novos Usu.', cur: ga4Metrics.newUsers,     prev: ga4Metrics.vs_previous.newUsers,     fmt: (v: number) => v.toLocaleString('pt-BR') },
+              ].map(item => (
+                <div key={item.label} style={{ background: 'rgba(0,200,232,0.04)', borderRadius: 8, padding: 12 }}>
+                  <p className="text-xs uppercase tracking-wide" style={{ color: '#7EAFC4' }}>{item.label}</p>
+                  <p className="text-xl font-bold mt-0.5" style={{ color: '#00C8E8', fontFamily: 'monospace' }}>{item.fmt(item.cur)}</p>
+                  <p className="text-xs mt-0.5" style={{ color: pctColor(item.cur, item.prev) }}>
+                    {pctArrow(item.cur, item.prev)} vs mês ant.: {item.fmt(item.prev)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm mb-4" style={{ color: '#7EAFC4' }}>Carregando métricas GA4...</p>
+          )}
+
+          {scMetrics && (
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 pt-4" style={{ borderTop: '1px solid rgba(0,200,232,0.08)' }}>
+              <p className="col-span-full text-xs font-medium uppercase tracking-wide" style={{ color: '#7EAFC4' }}>Search Console</p>
+              {[
+                { label: 'Impressões', value: scMetrics.impressions.toLocaleString('pt-BR') },
+                { label: 'Cliques',   value: scMetrics.clicks.toLocaleString('pt-BR') },
+                { label: 'CTR',       value: scMetrics.ctr.toFixed(2) + '%' },
+                { label: 'Posição',   value: '#' + scMetrics.position.toFixed(1) },
+              ].map(item => (
+                <div key={item.label} style={{ background: 'rgba(0,200,232,0.04)', borderRadius: 8, padding: 12 }}>
+                  <p className="text-xs uppercase tracking-wide" style={{ color: '#7EAFC4' }}>{item.label}</p>
+                  <p className="text-lg font-bold mt-0.5" style={{ color: '#A8CCE0', fontFamily: 'monospace' }}>{item.value}</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

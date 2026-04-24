@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { sheetsApi } from '../services/api'
+import { useState, useEffect } from 'react'
+import { sheetsApi, settingsApi } from '../services/api'
 import { useAuthStore } from '../stores/authStore'
 import TwoFactor from './Settings/TwoFactor'
 import AuditLogSection from './Settings/AuditLog'
@@ -24,9 +24,35 @@ const card: React.CSSProperties = {
 
 export default function Settings() {
   const user = useAuthStore((s) => s.user)
-  const [syncing, setSyncing] = useState(false)
+  const [syncing, setSyncing]       = useState(false)
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null)
-  const [syncError, setSyncError] = useState<string | null>(null)
+  const [syncError, setSyncError]   = useState<string | null>(null)
+
+  // SPRINT 3.4: meta mensal de MRR
+  const [mrrGoal, setMrrGoal]       = useState<number>(0)
+  const [mrrGoalInput, setMrrGoalInput] = useState<string>('0')
+  const [savingGoal, setSavingGoal] = useState(false)
+  const [goalSaved, setGoalSaved]   = useState(false)
+
+  useEffect(() => {
+    settingsApi.get().then(({ data }) => {
+      setMrrGoal(data.monthlyMrrGoal)
+      setMrrGoalInput(String(data.monthlyMrrGoal))
+    }).catch(() => null)
+  }, [])
+
+  async function handleSaveGoal() {
+    const val = parseFloat(mrrGoalInput.replace(',', '.'))
+    if (isNaN(val) || val < 0) return
+    setSavingGoal(true)
+    try {
+      await settingsApi.setMrrGoal(val)
+      setMrrGoal(val)
+      setGoalSaved(true)
+      setTimeout(() => setGoalSaved(false), 3000)
+    } catch { /* ignore */ }
+    finally { setSavingGoal(false) }
+  }
 
   async function handleSync() {
     setSyncing(true)
@@ -48,6 +74,43 @@ export default function Settings() {
       <div className="mb-6">
         <h1 className="text-2xl font-bold" style={{ color: '#E8F4F8' }}>Configurações</h1>
         <p className="text-sm mt-0.5" style={{ color: '#7EAFC4' }}>Gerencie integrações e preferências do sistema</p>
+      </div>
+
+      {/* SPRINT 3.4: Meta mensal de MRR */}
+      <div style={card}>
+        <h2 className="font-semibold mb-1" style={{ color: '#E8F4F8' }}>🎯 Meta de MRR Mensal</h2>
+        <p className="text-sm mb-4" style={{ color: '#7EAFC4' }}>
+          Define a meta de receita recorrente mensal exibida no Dashboard como barra de progresso.
+        </p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5" style={{ color: '#7EAFC4', fontSize: 14 }}>
+            <span>R$</span>
+            <input
+              type="number"
+              min={0}
+              step={100}
+              value={mrrGoalInput}
+              onChange={(e) => setMrrGoalInput(e.target.value)}
+              className="rounded-lg px-3 py-2 text-sm font-semibold w-36 outline-none"
+              style={{ background: 'rgba(0,200,232,0.06)', border: '1px solid rgba(0,200,232,0.2)', color: '#E8F4F8' }}
+              onKeyDown={(e) => e.key === 'Enter' && handleSaveGoal()}
+            />
+          </div>
+          <button
+            onClick={handleSaveGoal}
+            disabled={savingGoal}
+            className="text-sm font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-60"
+            style={{ background: 'linear-gradient(135deg, #00C8E8, #00E5C8)', color: '#061422' }}
+          >
+            {savingGoal ? 'Salvando...' : 'Salvar'}
+          </button>
+          {goalSaved && <span className="text-sm" style={{ color: '#10b981' }}>✅ Salvo!</span>}
+        </div>
+        {mrrGoal > 0 && (
+          <p className="text-xs mt-3" style={{ color: '#7EAFC4' }}>
+            Meta atual: R${mrrGoal.toLocaleString('pt-BR')}
+          </p>
+        )}
       </div>
 
       {/* Perfil */}

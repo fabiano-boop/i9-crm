@@ -124,6 +124,26 @@ export const duplicatesApi = {
   merge: (keepId: string, mergeIds: string[])        => api.post<{ lead: Lead; merged: number }>('/leads/duplicates/merge', { keepId, mergeIds }),
 }
 
+// SPRINT 3.4: Alertas inteligentes gerados dinamicamente
+export interface SmartAlert {
+  type: 'DEAL_STALLED' | 'OVERDUE_INVOICE' | 'HOT_LEAD_IDLE'
+  severity: 'high' | 'medium'
+  entityId: string
+  entityName: string
+  message: string
+  daysSince: number
+  actionUrl: string
+}
+
+// SPRINT 3.4: Configurações do usuário (inclui meta de MRR)
+export interface UserSettings {
+  id: string
+  name: string
+  email: string
+  role: string
+  monthlyMrrGoal: number
+}
+
 // ===== ALERTS =====
 export const alertsApi = {
   list: (params?: { isRead?: boolean; isDismissed?: boolean; type?: string; page?: number; limit?: number }) =>
@@ -131,6 +151,14 @@ export const alertsApi = {
   unreadCount: () => api.get<{ count: number }>('/alerts/unread-count'),
   markRead:    (id: string) => api.put<OpportunityAlert>(`/alerts/${id}/read`),
   dismiss:     (id: string) => api.put<OpportunityAlert>(`/alerts/${id}/dismiss`),
+  // SPRINT 3.4: alertas inteligentes (DEAL_STALLED, OVERDUE_INVOICE, HOT_LEAD_IDLE)
+  smart:       () => api.get<SmartAlert[]>('/alerts/smart'),
+}
+
+// ===== SETTINGS =====
+export const settingsApi = {
+  get:        () => api.get<UserSettings>('/settings'),
+  setMrrGoal: (goal: number) => api.put<{ id: string; monthlyMrrGoal: number }>('/settings/mrr-goal', { goal }),
 }
 
 // ===== ADMIN =====
@@ -338,6 +366,12 @@ export interface Client {
   notes?: string | null
   cancelledAt?: string | null
   cancellationReason?: string | null
+  serviceId?: string | null
+  // SPRINT 3.6: GA4
+  ga4PropertyId?: string | null
+  ga4AccessToken?: string | null
+  ga4TokenExpiresAt?: string | null
+  searchConsoleUrl?: string | null
   createdAt: string
   updatedAt: string
   weeklyReports?: WeeklyReport[]
@@ -509,10 +543,74 @@ export interface FinancialAnalytics {
   generatedAt: string
 }
 
+// SPRINT 3.3: Métricas SaaS — MRR, Churn, LTV, NRR
+export interface SaasMetrics {
+  mrr: number
+  mrrStart: number
+  churnedMrr: number
+  expansionMrr: number
+  contractionMrr: number
+  nrr: number
+  churnRate: number
+  avgLtv: number
+  activeClients: number
+}
+
+// SPRINT 3.2: Comparativo mês atual vs mês anterior
+export interface DashboardComparison {
+  current:  { mrr: number; leads: number; deals: number; revenue: number }
+  previous: { mrr: number; leads: number; deals: number; revenue: number }
+  deltas: {
+    mrr:     { value: number; percent: number; direction: 'up' | 'down' | 'neutral' }
+    leads:   { value: number; percent: number; direction: 'up' | 'down' | 'neutral' }
+    deals:   { value: number; percent: number; direction: 'up' | 'down' | 'neutral' }
+    revenue: { value: number; percent: number; direction: 'up' | 'down' | 'neutral' }
+  }
+}
+
 export const analyticsApi = {
   dashboard:  () => api.get<DashboardAnalytics>('/analytics/dashboard'),
-  // SPRINT 1: Endpoint financeiro com custo interno real
   financial:  () => api.get<FinancialAnalytics>('/analytics/financial'),
+  comparison: () => api.get<DashboardComparison>('/analytics/comparison'),
+  saas:       () => api.get<SaasMetrics>('/analytics/saas'),
+}
+
+// ===== SERVICES (SPRINT 3.5) =====
+export interface Service {
+  id: string; name: string; description: string | null; category: string
+  promoPrice: number; normalPrice: number; billingType: string; isActive: boolean
+  createdAt: string; updatedAt: string
+}
+
+export interface ServiceSalesHistory {
+  serviceId: string; serviceName: string; category: string
+  totalRevenue: number; totalContracts: number; activeContracts: number; avgTicket: number
+  monthlyRevenue: { month: string; revenue: number }[]
+  contracts: { clientId: string; clientName: string; startDate: string; monthlyValue: number; status: 'ACTIVE' | 'PAUSED' | 'CHURNED' }[]
+}
+
+export const servicesApi = {
+  list:           () => api.get<{ services: Service[]; total: number }>('/services'),
+  get:            (id: string) => api.get<Service>(`/services/${id}`),
+  salesHistory:   (id: string) => api.get<ServiceSalesHistory>(`/services/${id}/sales-history`),
+}
+
+// ===== INTEGRATIONS — GA4 + Search Console (SPRINT 3.6) =====
+export interface Ga4Metrics {
+  sessions: number; activeUsers: number; bounceRate: number; newUsers: number
+  vs_previous: { sessions: number; activeUsers: number; bounceRate: number; newUsers: number }
+}
+export interface SearchConsoleMetrics {
+  impressions: number; clicks: number; ctr: number; position: number
+}
+
+export const integrationsApi = {
+  ga4AuthUrl:      (clientId: string) => api.get<{ authUrl: string }>(`/integrations/ga4/auth/${clientId}`),
+  ga4SaveProperty: (clientId: string, propertyId: string, searchConsoleUrl?: string) =>
+    api.put<{ ok: boolean }>(`/integrations/ga4/property/${clientId}`, { propertyId, searchConsoleUrl }),
+  ga4Metrics:      (clientId: string) => api.get<Ga4Metrics>(`/integrations/ga4/metrics/${clientId}`),
+  scMetrics:       (clientId: string) => api.get<SearchConsoleMetrics>(`/integrations/search-console/metrics/${clientId}`),
+  ga4Disconnect:   (clientId: string) => api.delete<{ ok: boolean }>(`/integrations/ga4/${clientId}`),
 }
 
 // ===== CLIENTS =====

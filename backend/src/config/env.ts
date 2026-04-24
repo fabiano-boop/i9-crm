@@ -29,6 +29,11 @@ const envSchema = z.object({
   WHATSAPP_AGENT_ENABLED: z.coerce.boolean().default(false),
   REPORTS_BASE_URL: z.string().default('http://localhost:3000'),
   PUPPETEER_EXECUTABLE_PATH: z.string().optional(),
+  // SPRINT 3.6: Google Analytics 4 + Search Console OAuth2
+  GA4_CLIENT_ID: z.string().optional(),
+  GA4_CLIENT_SECRET: z.string().optional(),
+  GA4_REDIRECT_URI: z.string().optional(),
+  SEARCH_CONSOLE_REDIRECT_URI: z.string().optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)

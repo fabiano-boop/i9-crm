@@ -3,7 +3,7 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { analyticsApi, campaignsApi, agentApi, type AgentAnalytics, type DashboardAnalytics } from '../services/api'
+import { analyticsApi, campaignsApi, agentApi, type AgentAnalytics, type DashboardAnalytics, type SaasMetrics } from '../services/api'
 import type { Campaign } from '../services/api'
 
 const STAGE_LABELS: Record<string, string> = {
@@ -84,25 +84,104 @@ function EmptyState({ message }: { message: string }) {
   )
 }
 
+// SPRINT 3.3: Seção de Métricas SaaS com NRR, MRR, Churn e LTV
+function SaasSection({ metrics }: { metrics: SaasMetrics }) {
+  const fmt = (v: number) =>
+    new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v)
+
+  const nrrColor =
+    metrics.nrr > 100 ? '#10b981' :
+    metrics.nrr >= 90 ? '#eab308' :
+    '#ef4444'
+
+  // Barra de referência: escala 0–150%, marca break-even em 100% (66.7% da barra)
+  const nrrBarPct     = Math.min((metrics.nrr / 150) * 100, 100)
+  const breakEvenLeft = (100 / 150) * 100
+
+  return (
+    <div>
+      <h2 className="text-base font-semibold mb-4" style={{ color: '#E8F4F8' }}>📈 Métricas SaaS</h2>
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+
+        {/* MRR */}
+        <div style={cardStyle} className="flex flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wide" style={{ color: '#7EAFC4' }}>MRR</span>
+          <span className="text-3xl font-bold" style={{ color: '#10b981', fontFamily: 'monospace' }}>{fmt(metrics.mrr)}</span>
+          <span className="text-xs mt-1" style={{ color: '#7EAFC4' }}>{metrics.activeClients} clientes ativos</span>
+        </div>
+
+        {/* Churn Rate */}
+        <div style={cardStyle} className="flex flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wide" style={{ color: '#7EAFC4' }}>Churn MRR</span>
+          <span className="text-3xl font-bold" style={{ color: metrics.churnRate > 5 ? '#ef4444' : metrics.churnRate > 2 ? '#eab308' : '#10b981', fontFamily: 'monospace' }}>
+            {metrics.churnRate}%
+          </span>
+          <span className="text-xs mt-1" style={{ color: '#7EAFC4' }}>{fmt(metrics.churnedMrr)} perdido no mês</span>
+        </div>
+
+        {/* LTV */}
+        <div style={cardStyle} className="flex flex-col gap-1">
+          <span className="text-xs font-medium uppercase tracking-wide" style={{ color: '#7EAFC4' }}>LTV Médio</span>
+          <span className="text-3xl font-bold" style={{ color: '#00C8E8', fontFamily: 'monospace' }}>{fmt(metrics.avgLtv)}</span>
+          <span className="text-xs mt-1" style={{ color: '#7EAFC4' }}>
+            {metrics.churnRate > 0 ? 'baseado no churn atual' : 'estimativa 24 meses'}
+          </span>
+        </div>
+
+        {/* NRR — com barra de referência em 100% */}
+        <div
+          style={cardStyle}
+          className="flex flex-col gap-1"
+          title="NRR > 100% significa que sua base cresce mesmo sem novos clientes"
+        >
+          <span className="text-xs font-medium uppercase tracking-wide" style={{ color: '#7EAFC4' }}>NRR</span>
+          <span className="text-3xl font-bold" style={{ color: nrrColor, fontFamily: 'monospace' }}>
+            {metrics.nrr}%
+          </span>
+          {/* Barra com linha de break-even em 100% */}
+          <div className="mt-2 relative h-2 rounded-full" style={{ background: 'rgba(0,200,232,0.1)' }}>
+            <div
+              className="absolute inset-y-0 left-0 rounded-full transition-all"
+              style={{ width: `${nrrBarPct}%`, background: nrrColor }}
+            />
+            {/* Linha de referência em 100% */}
+            <div
+              className="absolute inset-y-0 w-px"
+              style={{ left: `${breakEvenLeft}%`, background: '#7EAFC4', opacity: 0.7 }}
+            />
+          </div>
+          <span className="text-xs mt-1" style={{ color: '#7EAFC4' }}>break-even em 100%</span>
+        </div>
+
+      </div>
+    </div>
+  )
+}
+
 export default function Analytics() {
-  const [dashboard, setDashboard] = useState<DashboardAnalytics | null>(null)
-  const [campaigns, setCampaigns] = useState<Campaign[]>([])
-  const [agentData, setAgentData] = useState<AgentAnalytics | null>(null)
-  const [loading, setLoading]     = useState(true)
-  const [error, setError]         = useState<string | null>(null)
+  const [dashboard, setDashboard]   = useState<DashboardAnalytics | null>(null)
+  const [campaigns, setCampaigns]   = useState<Campaign[]>([])
+  const [agentData, setAgentData]   = useState<AgentAnalytics | null>(null)
+  // SPRINT 3.3: métricas SaaS
+  const [saasMetrics, setSaasMetrics] = useState<SaasMetrics | null>(null)
+  const [loading, setLoading]         = useState(true)
+  const [error, setError]             = useState<string | null>(null)
 
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true)
-        const [dashRes, campaignsRes, agentRes] = await Promise.all([
+        const [dashRes, campaignsRes, agentRes, saasRes] = await Promise.all([
           analyticsApi.dashboard(),
           campaignsApi.list({ limit: 100 }),
           agentApi.analytics().catch(() => null),
+          // SPRINT 3.3: métricas SaaS
+          analyticsApi.saas().catch(() => null),
         ])
         setDashboard(dashRes.data)
         setCampaigns(campaignsRes.data.data)
         if (agentRes) setAgentData(agentRes.data)
+        if (saasRes?.data) setSaasMetrics(saasRes.data)
       } catch (err) {
         setError('Não foi possível carregar os dados. Verifique a conexão com o servidor.')
         console.error(err)
@@ -171,6 +250,9 @@ export default function Analytics() {
         <KPICard label="Leads mornos (WARM)"  value={warmCount}      accent="#eab308" />
         <KPICard label="Total de campanhas"   value={totalCampaigns} accent="#8b5cf6" />
       </div>
+
+      {/* SPRINT 3.3: Métricas SaaS — MRR, Churn, LTV e NRR */}
+      {saasMetrics && <SaasSection metrics={saasMetrics} />}
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div style={cardStyle}>

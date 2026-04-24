@@ -48,6 +48,22 @@ export async function sendText(phone: string, message: string, retries = 3): Pro
   return false
 }
 
+// Envia documento (PDF) via Whapi usando base64
+export async function sendDocument(phone: string, buffer: Buffer, filename: string): Promise<boolean> {
+  const to = normalizePhone(phone)
+  if (to.length < 12) return false
+
+  try {
+    const media = `data:application/pdf;base64,${buffer.toString('base64')}`
+    await whapiHttp.post('/messages/document', { to, media, filename })
+    return true
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn({ phone: to, filename, err: msg }, 'Falha ao enviar documento via Whapi')
+    return false
+  }
+}
+
 export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
   const campaign = await prisma.campaign.findUnique({ where: { id: campaignId } })
   if (!campaign) throw new Error('Campanha não encontrada')

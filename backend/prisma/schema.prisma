@@ -23,6 +23,8 @@ model User {
   email           String           @unique
   passwordHash    String
   role            Role             @default(AGENT)
+  // SPRINT 3.4: meta mensal de MRR do usuário
+  monthlyMrrGoal  Float            @default(0)
   createdAt       DateTime         @default(now())
   leads           Lead[]
   campaigns       Campaign[]
@@ -351,12 +353,22 @@ model Client {
   notes               String?
   cancelledAt         DateTime?
   cancellationReason  String?
+  // SPRINT 3.5: serviço contratado
+  serviceId           String?
+  service             Service?       @relation(fields: [serviceId], references: [id])
+  // SPRINT 3.6: Google Analytics 4 + Search Console
+  ga4PropertyId       String?
+  ga4AccessToken      String?        // criptografado AES-256
+  ga4RefreshToken     String?        // criptografado AES-256
+  ga4TokenExpiresAt   DateTime?
+  searchConsoleUrl    String?        // ex: sc-domain:cliente.com.br
   createdAt           DateTime       @default(now())
   updatedAt           DateTime       @updatedAt
   weeklyReports WeeklyReport[]
   invoices      Invoice[]            // SPRINT 2: faturas do cliente
 
   @@index([status])
+  @@index([serviceId])
 }
 
 // =====================
@@ -409,6 +421,8 @@ model Service {
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  // SPRINT 3.5: clientes que contrataram este serviço
+  clients     Client[]
 }
 
 // =====================
