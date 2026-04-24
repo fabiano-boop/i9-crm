@@ -55,6 +55,23 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
   res.status(500).json({ error: 'Erro interno do servidor', code: 'INTERNAL_ERROR' })
 })
 
+async function ensureAdminExists() {
+  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
+  if (!admin) {
+    const bcrypt = await import('bcryptjs')
+    const hash = await bcrypt.hash('i9admin2024', 10)
+    await prisma.user.create({
+      data: {
+        name: 'Fabiano Admin',
+        email: 'admin@i9solucoes.com.br',
+        passwordHash: hash,
+        role: 'ADMIN',
+      },
+    })
+    logger.info('Admin criado automaticamente')
+  }
+}
+
 // Graceful shutdown
 async function shutdown() {
   logger.info('Encerrando servidor...')
@@ -68,6 +85,8 @@ process.on('SIGTERM', shutdown)
 initWebSocket(httpServer)
 
 const PORT = Number(process.env.PORT) || 3000
+
+ensureAdminExists().catch((err) => logger.warn({ err }, 'ensureAdminExists falhou'))
 
 httpServer.listen(PORT, () => {
   logger.info(`i9 CRM backend rodando na porta ${PORT}`)
