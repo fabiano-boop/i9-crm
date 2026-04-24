@@ -17,7 +17,7 @@ const CLASSIFICATION_DOT: Record<string, string> = {
 }
 
 const PACKAGE_LABELS: Record<string, string> = {
-  starter: 'Starter — R$997/mês', growth: 'Growth — R$1.997/mês', dominacao: 'Dominação — R$3.497/mês',
+  start: 'Start — R$750/mês (promo)', growth: 'Growth — R$1.097/mês (promo)', premium: 'Premium — R$1.797/mês (promo)',
 }
 
 function timeAgo(ts: string | Date): string {

@@ -37,7 +37,7 @@ function calcProjection(hotLeads: number, warmLeads: number) {
   const fromHot  = Math.round(hotLeads  * 0.30)
   const fromWarm = Math.round(warmLeads * 0.10)
   const total = fromHot + fromWarm
-  return { total, mrr: total * 497 }
+  return { total, mrr: total * 1097 }
 }
 
 const cardStyle: React.CSSProperties = {
@@ -120,7 +120,7 @@ export default function MarketIntelligence() {
         {[
           { label: 'PMEs na Zona Leste', value: '~80 mil',    sub: 'potencial total',            accent: '#00C8E8' },
           { label: 'TAM estimado',       value: 'R$ 24M/ano', sub: 'mercado endereçável',        accent: '#00E5C8' },
-          { label: 'Ticket médio i9',    value: 'R$ 497/mês', sub: 'pacote Pro',                 accent: '#00C8E8' },
+          { label: 'Ticket médio i9',    value: 'R$ 1.097/mês', sub: 'pacote Growth (promo)',     accent: '#00C8E8' },
           { label: 'ROI médio do cliente', value: '8–15×',   sub: 'retorno sobre investimento', accent: '#fbbf24' },
         ].map(kpi => (
           <div key={kpi.label} style={{ ...cardStyle, padding: 16 }}>

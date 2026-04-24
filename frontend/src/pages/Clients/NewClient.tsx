@@ -24,9 +24,9 @@ const NICHOS = [
   { value: 'outro',        label: 'Outro' },
 ]
 const PACOTES = [
-  { value: 'basico',  label: 'Básico',  preco: 297 },
-  { value: 'pro',     label: 'Pro',     preco: 497 },
-  { value: 'premium', label: 'Premium', preco: 897 },
+  { value: 'start',   label: 'Start',   preco: 750,  precoNormal: 997  },
+  { value: 'growth',  label: 'Growth',  preco: 1097, precoNormal: 1497 },
+  { value: 'premium', label: 'Premium', preco: 1797, precoNormal: 2497 },
 ]
 const ORIGENS = [
   { value: 'lead',     label: 'Lead captado no CRM' },
@@ -45,7 +45,7 @@ const schema = z.object({
   email:         z.string().email('Email inválido').optional().or(z.literal('')),
   instagram:     z.string().optional(),
   website:       z.string().url('URL inválida').optional().or(z.literal('')),
-  package:       z.enum(['basico', 'pro', 'premium']).optional(),
+  package:       z.enum(['start', 'growth', 'premium']).optional(),
   monthlyValue:  z.coerce.number().positive().optional(),
   startDate:     z.string().optional(),
   origin:        z.enum(['lead', 'referral', 'manual']).default('manual'),

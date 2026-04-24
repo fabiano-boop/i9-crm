@@ -329,7 +329,7 @@ export interface Client {
   address?: string | null
   neighborhood?: string | null
   niche?: string | null
-  package?: 'basico' | 'pro' | 'premium' | null
+  package?: 'start' | 'growth' | 'premium' | null
   monthlyValue?: number | null
   startDate: string
   status: 'active' | 'paused' | 'cancelled'
@@ -354,7 +354,7 @@ export interface CreateClientInput {
   address?: string | null
   neighborhood?: string | null
   niche?: string | null
-  package?: 'basico' | 'pro' | 'premium' | null
+  package?: 'start' | 'growth' | 'premium' | null
   monthlyValue?: number | null
   startDate?: string
   origin?: 'lead' | 'referral' | 'manual'

@@ -3,8 +3,8 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { clientsApi, reportsApi, type Client, type WeeklyReport } from '../../services/api'
 
 const PACKAGE_INFO: Record<string, { label: string; bg: string; color: string }> = {
-  basico:  { label: 'Básico',  bg: 'rgba(100,116,139,0.2)', color: '#94a3b8' },
-  pro:     { label: 'Pro',     bg: 'rgba(26,110,255,0.15)', color: '#60a5fa' },
+  start:   { label: 'Start',   bg: 'rgba(100,116,139,0.2)', color: '#94a3b8' },
+  growth:  { label: 'Growth',  bg: 'rgba(26,110,255,0.15)', color: '#60a5fa' },
   premium: { label: 'Premium', bg: 'rgba(139,92,246,0.15)', color: '#c084fc' },
 }
 const STATUS_INFO: Record<string, { label: string; dot: string }> = {

@@ -2,10 +2,10 @@ import { useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { clientsApi, type Client } from '../../services/api'
 
-const PACKAGE_LABELS: Record<string, string> = { basico: 'Básico', pro: 'Pro', premium: 'Premium' }
+const PACKAGE_LABELS: Record<string, string> = { start: 'Start', growth: 'Growth', premium: 'Premium' }
 const PACKAGE_STYLES: Record<string, { bg: string; color: string }> = {
-  basico:  { bg: 'rgba(100,116,139,0.2)', color: '#94a3b8' },
-  pro:     { bg: 'rgba(26,110,255,0.15)', color: '#60a5fa' },
+  start:   { bg: 'rgba(100,116,139,0.2)', color: '#94a3b8' },
+  growth:  { bg: 'rgba(26,110,255,0.15)', color: '#60a5fa' },
   premium: { bg: 'rgba(139,92,246,0.15)', color: '#c084fc' },
 }
 const STATUS_LABELS: Record<string, string> = { active: 'Ativo', paused: 'Pausado', cancelled: 'Cancelado' }

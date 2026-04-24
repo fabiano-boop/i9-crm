@@ -55,7 +55,12 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: 'Inter', sans-serif;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  h1, h2, h3, h4, h5, h6, .heading {
+    font-family: 'Poppins', sans-serif;
+    font-weight: 700;
   }
 }
 
