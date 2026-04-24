@@ -339,7 +339,7 @@ model Client {
   address       String?
   neighborhood  String?
   niche         String?
-  package       String?        // basico | pro | premium
+  package       String?        // start | growth | premium
   monthlyValue  Float?
   startDate     DateTime       @default(now())
   status        String         @default("active") // active | paused | churned
@@ -388,4 +388,20 @@ model WeeklyReport {
   createdAt DateTime @default(now())
 
   @@index([clientId, weekStart])
+}
+
+// =====================
+// SERVIÇOS / PRODUTOS
+// =====================
+
+model Service {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  category    String   // site | landing_page | trafego | social_media | criativo | app | consultoria
+  promoPrice  Float
+  normalPrice Float
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }

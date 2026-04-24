@@ -82,10 +82,9 @@ export default function Sidebar() {
           }}
         />
         <span
-          className="text-xs uppercase tracking-widest"
-          style={{ color: '#7EAFC4', fontFamily: 'monospace' }}
+          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 700, fontSize: '14px', color: '#fff' }}
         >
-          CRM
+          i9 Soluções Digitais
         </span>
       </div>
 

@@ -21,7 +21,7 @@ const createClientSchema = z.object({
   address: z.string().optional().nullable(),
   neighborhood: z.string().optional().nullable(),
   niche: z.string().optional().nullable(),
-  package: z.enum(['basico', 'pro', 'premium']).optional().nullable(),
+  package: z.enum(['start', 'growth', 'premium']).optional().nullable(),
   monthlyValue: z.number().positive().optional().nullable(),
   startDate: z.string().datetime({ offset: true }).optional(),
   origin: z.enum(['lead', 'referral', 'manual']).default('manual'),

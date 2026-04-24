@@ -9,7 +9,7 @@ export const segmentos = {
     ticketMin: 297,
     ticketMax: 497,
     servicoIdeal: 'Agente WhatsApp + Lembretes automáticos',
-    pacoteRecomendado: 'Pro',
+    pacoteRecomendado: 'Growth',
     potencialConversao: 85,
   },
   restaurante: {
@@ -39,7 +39,7 @@ export const segmentos = {
     ticketMin: 297,
     ticketMax: 497,
     servicoIdeal: 'Agente WhatsApp + Orçamentos automáticos + Status do carro',
-    pacoteRecomendado: 'Básico',
+    pacoteRecomendado: 'Start',
     potencialConversao: 50,
   },
   academia: {
@@ -49,7 +49,7 @@ export const segmentos = {
     ticketMin: 297,
     ticketMax: 497,
     servicoIdeal: 'Agente WhatsApp + Matrícula online + Lembretes de renovação',
-    pacoteRecomendado: 'Pro',
+    pacoteRecomendado: 'Growth',
     potencialConversao: 45,
   },
   petshop: {
@@ -59,7 +59,7 @@ export const segmentos = {
     ticketMin: 297,
     ticketMax: 397,
     servicoIdeal: 'Agente WhatsApp + Agendamento + Lembretes de vacina',
-    pacoteRecomendado: 'Básico',
+    pacoteRecomendado: 'Start',
     potencialConversao: 40,
   },
 } as const
@@ -68,27 +68,30 @@ export type SegmentoKey = keyof typeof segmentos
 export type Segmento = typeof segmentos[SegmentoKey]
 
 export const pacotes = {
-  basico: {
-    nome: 'Básico',
-    preco: 297,
+  start: {
+    nome: 'Start',
+    precoPromo: 750,
+    precoNormal: 997,
     descricao:
       'Atendimento automático 24h, FAQ inteligente, coleta de dados, horário de funcionamento',
     limiteConversas: 500,
     nichos: ['salao_beleza', 'oficina', 'petshop'],
   },
-  pro: {
-    nome: 'Pro',
-    preco: 497,
+  growth: {
+    nome: 'Growth',
+    precoPromo: 1097,
+    precoNormal: 1497,
     descricao:
-      'Básico + agendamento integrado, confirmação automática, lembrete D-1, catálogo',
+      'Start + agendamento integrado, confirmação automática, lembrete D-1, catálogo',
     limiteConversas: 2000,
     nichos: ['salao_beleza', 'academia', 'restaurante'],
   },
   premium: {
     nome: 'Premium',
-    preco: 897,
+    precoPromo: 1797,
+    precoNormal: 2497,
     descricao:
-      'Pro + CRM básico, campanhas de reengajamento, relatório mensal personalizado',
+      'Growth + CRM básico, campanhas de reengajamento, relatório mensal personalizado',
     limiteConversas: 999999,
     nichos: ['clinica', 'restaurante'],
   },

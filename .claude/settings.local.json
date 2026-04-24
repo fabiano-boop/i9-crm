@@ -115,7 +115,12 @@
       "Bash(python3 -c \" import sys, json d = json.load\\(sys.stdin\\) envs = d.get\\('environments',{}\\).get\\('edges',[]\\) for env in envs: node = env['node'] print\\('Environment:', node['name']\\) for si in node.get\\('serviceInstances',{}\\).get\\('edges',[]\\): snode = si['node'] latest = snode.get\\('latestDeployment',{}\\) active = snode.get\\('activeDeployments',[]\\) print\\(' Service:', snode['serviceName']\\) print\\(' Latest deploy status:', latest.get\\('status'\\)\\) print\\(' Latest deploy id:', latest.get\\('id'\\)\\) print\\(' Active deployments:', [a.get\\('status'\\) for a in active]\\) \")",
       "Bash(npx vite *)",
       "Bash(cat vercel.json)",
-      "Bash(cat ../vercel.json)"
+      "Bash(cat ../vercel.json)",
+      "Bash(cat frontend/vercel.json)",
+      "Bash(ls -la frontend/src/pages/)",
+      "Bash(ls -la src/pages/)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ]
   }
 }

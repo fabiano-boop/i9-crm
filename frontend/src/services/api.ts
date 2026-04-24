@@ -467,6 +467,30 @@ export interface AgentAnalytics {
   }
 }
 
+// ===== ANALYTICS DASHBOARD =====
+export interface DashboardAnalytics {
+  leads: {
+    total: number
+    last7Days: number
+    last30Days: number
+    byClassification: { HOT: number; WARM: number; COLD: number }
+    byStatus: Record<string, number>
+    byPipelineStage: Record<string, number>
+  }
+  campaigns: {
+    total: number
+    byStatus: Record<string, number>
+  }
+  interactions: { last7Days: number }
+  topNiches: { niche: string | null; count: number }[]
+  topNeighborhoods: { neighborhood: string | null; count: number }[]
+  generatedAt: string
+}
+
+export const analyticsApi = {
+  dashboard: () => api.get<DashboardAnalytics>('/analytics/dashboard'),
+}
+
 // ===== CLIENTS =====
 export const clientsApi = {
   list: (params?: { status?: string; niche?: string; neighborhood?: string; package?: string; page?: number; limit?: number }) =>

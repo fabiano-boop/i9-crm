@@ -95,15 +95,15 @@ export function takeoverFromAgent(leadId: string): void {
 // ─── Packages ─────────────────────────────────────────────────────────────────
 
 const PACKAGES = {
-  starter:   { name: 'Starter',    price: 'R$997/mês',   tagline: 'Presença digital + Google Meu Negócio' },
-  growth:    { name: 'Growth',     price: 'R$1.997/mês', tagline: 'Tráfego pago + redes sociais gerenciadas' },
-  dominacao: { name: 'Dominação',  price: 'R$3.497/mês', tagline: 'Estratégia completa + conteúdo profissional' },
+  start:   { name: 'Start',    price: 'R$750/mês (promo)',   precoNormal: 'R$997/mês',   tagline: 'Presença digital + Google Meu Negócio' },
+  growth:  { name: 'Growth',   price: 'R$1.097/mês (promo)', precoNormal: 'R$1.497/mês', tagline: 'Tráfego pago + redes sociais gerenciadas' },
+  premium: { name: 'Premium',  price: 'R$1.797/mês (promo)', precoNormal: 'R$2.497/mês', tagline: 'Solução completa + conteúdo profissional + CRM' },
 } as const
 
 function suggestPackage(lead: Lead): keyof typeof PACKAGES {
-  if (lead.score >= 85) return 'dominacao'
+  if (lead.score >= 85) return 'premium'
   if (lead.score >= 60) return 'growth'
-  return 'starter'
+  return 'start'
 }
 
 // ─── Maya System Prompt ───────────────────────────────────────────────────────
@@ -125,11 +125,20 @@ REGRAS ABSOLUTAS PARA WHATSAPP:
 - Nunca pareça estar lendo um script
 
 PACOTES DA I9 (apresente APENAS quando o lead perguntar preço OU demonstrar interesse claro):
-- Starter R$997/mês → Presença digital, Google Meu Negócio otimizado, site básico
-- Growth R$1.997/mês → Tráfego pago (Meta + Google Ads), redes sociais, relatórios mensais
-- Dominação R$3.497/mês → Tudo do Growth + estratégia completa, conteúdo profissional, CRM
 
-AO APRESENTAR PREÇO: contextualize com resultado esperado — nunca preço isolado.
+SCRIPT DE APRESENTAÇÃO DE PLANOS (use este texto adaptado ao contexto):
+"Temos 3 opções com condição especial de lançamento para os 10 primeiros clientes:
+• START R$750/mês — presença digital + Google
+• GROWTH R$1.097/mês — tráfego pago + redes sociais
+• PREMIUM R$1.797/mês — solução completa
+Após as 10 vagas volta ao preço normal. Qual faz mais sentido pro [nome do negócio]?"
+
+REFERÊNCIA DE PREÇOS NORMAIS (após promoção):
+- Start R$997/mês → Presença digital, Google Meu Negócio otimizado, site básico
+- Growth R$1.497/mês → Tráfego pago (Meta + Google Ads), redes sociais, relatórios mensais
+- Premium R$2.497/mês → Tudo do Growth + estratégia completa, conteúdo profissional, CRM
+
+AO APRESENTAR PREÇO: use o script acima e contextualize com resultado esperado — nunca preço isolado.
 
 SINALIZAR stage=human_needed QUANDO:
 - Lead pediu proposta formal ou contrato
@@ -229,7 +238,7 @@ Analise tudo e retorne APENAS um JSON válido:
   "message": "<resposta como Maya, máx 3 linhas, tom WhatsApp natural>",
   "shouldHandoff": <true|false>,
   "handoffReason": "<motivo detalhado se shouldHandoff=true, senão null>",
-  "suggestedPackage": "<starter|growth|dominacao|null>",
+  "suggestedPackage": "<start|growth|premium|null>",
   "newLeadInfo": "<info nova sobre o negócio ou null>",
   "urgencyLevel": "<low|medium|high>"
 }`

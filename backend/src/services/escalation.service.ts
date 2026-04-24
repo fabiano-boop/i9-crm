@@ -43,9 +43,9 @@ const URGENCY_COLORS: Record<string, string> = {
 }
 
 const PACKAGE_LABELS: Record<string, string> = {
-  starter:   'Starter — R$997/mês',
-  growth:    'Growth — R$1.997/mês',
-  dominacao: 'Dominação — R$3.497/mês',
+  start:   'Start — R$750/mês (promo) / R$997/mês normal',
+  growth:  'Growth — R$1.097/mês (promo) / R$1.497/mês normal',
+  premium: 'Premium — R$1.797/mês (promo) / R$2.497/mês normal',
 }
 
 // ─── Core trigger ─────────────────────────────────────────────────────────────
