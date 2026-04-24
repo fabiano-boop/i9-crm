@@ -19,6 +19,7 @@ router.get('/dashboard', asyncHandler(async (_req: Request, res: Response): Prom
     totalLeads,
     leadsByClassification,
     leadsByStatus,
+    leadsByPipelineStage,
     leadsLast7,
     leadsLast30,
     totalCampaigns,
@@ -28,28 +29,20 @@ router.get('/dashboard', asyncHandler(async (_req: Request, res: Response): Prom
     topNiches,
   ] = await Promise.all([
     prisma.lead.count(),
-
     prisma.lead.groupBy({ by: ['classification'], _count: { id: true } }),
-
     prisma.lead.groupBy({ by: ['status'], _count: { id: true } }),
-
+    prisma.lead.groupBy({ by: ['pipelineStage'], _count: { id: true } }),
     prisma.lead.count({ where: { importedAt: { gte: sevenDaysAgo } } }),
-
     prisma.lead.count({ where: { importedAt: { gte: thirtyDaysAgo } } }),
-
     prisma.campaign.count(),
-
     prisma.campaign.groupBy({ by: ['status'], _count: { id: true } }),
-
     prisma.interaction.count({ where: { createdAt: { gte: sevenDaysAgo } } }),
-
     prisma.lead.groupBy({
       by: ['neighborhood'],
       _count: { id: true },
       orderBy: { _count: { id: 'desc' } },
       take: 5,
     }),
-
     prisma.lead.groupBy({
       by: ['niche'],
       _count: { id: true },
@@ -63,6 +56,9 @@ router.get('/dashboard', asyncHandler(async (_req: Request, res: Response): Prom
   )
   const statusMap = Object.fromEntries(
     leadsByStatus.map((r) => [r.status, r._count.id])
+  )
+  const pipelineStageMap = Object.fromEntries(
+    leadsByPipelineStage.map((r) => [r.pipelineStage ?? 'new', r._count.id])
   )
   const campaignMap = Object.fromEntries(
     campaignsByStatus.map((r) => [r.status, r._count.id])
@@ -79,6 +75,7 @@ router.get('/dashboard', asyncHandler(async (_req: Request, res: Response): Prom
         COLD: classMap['COLD'] ?? 0,
       },
       byStatus: statusMap,
+      byPipelineStage: pipelineStageMap,
     },
     campaigns: {
       total: totalCampaigns,

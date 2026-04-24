@@ -3,8 +3,8 @@ import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from 'recharts'
-import { leadsApi, campaignsApi, agentApi, type AgentAnalytics } from '../services/api'
-import type { Lead, Campaign } from '../services/api'
+import { analyticsApi, campaignsApi, agentApi, type AgentAnalytics, type DashboardAnalytics } from '../services/api'
+import type { Campaign } from '../services/api'
 
 const STAGE_LABELS: Record<string, string> = {
   new: 'Novo', contacted: 'Contatado', replied: 'Respondeu',
@@ -85,7 +85,7 @@ function EmptyState({ message }: { message: string }) {
 }
 
 export default function Analytics() {
-  const [leads, setLeads]         = useState<Lead[]>([])
+  const [dashboard, setDashboard] = useState<DashboardAnalytics | null>(null)
   const [campaigns, setCampaigns] = useState<Campaign[]>([])
   const [agentData, setAgentData] = useState<AgentAnalytics | null>(null)
   const [loading, setLoading]     = useState(true)
@@ -95,12 +95,12 @@ export default function Analytics() {
     async function fetchData() {
       try {
         setLoading(true)
-        const [leadsRes, campaignsRes, agentRes] = await Promise.all([
-          leadsApi.list({ limit: 200, page: 1 }),
+        const [dashRes, campaignsRes, agentRes] = await Promise.all([
+          analyticsApi.dashboard(),
           campaignsApi.list({ limit: 100 }),
           agentApi.analytics().catch(() => null),
         ])
-        setLeads(leadsRes.data.data)
+        setDashboard(dashRes.data)
         setCampaigns(campaignsRes.data.data)
         if (agentRes) setAgentData(agentRes.data)
       } catch (err) {
@@ -113,29 +113,23 @@ export default function Analytics() {
     fetchData()
   }, [])
 
-  const totalLeads     = leads.length
-  const hotCount       = leads.filter((l) => l.classification === 'HOT').length
-  const warmCount      = leads.filter((l) => l.classification === 'WARM').length
-  const totalCampaigns = campaigns.length
+  const totalLeads     = dashboard?.leads.total ?? 0
+  const hotCount       = dashboard?.leads.byClassification.HOT ?? 0
+  const warmCount      = dashboard?.leads.byClassification.WARM ?? 0
+  const totalCampaigns = dashboard?.campaigns.total ?? campaigns.length
 
   const classificationData = (['HOT', 'WARM', 'COLD'] as const).map((cls) => ({
     name: CLASSIFICATION_LABELS[cls],
-    value: leads.filter((l) => l.classification === cls).length,
+    value: dashboard?.leads.byClassification[cls] ?? 0,
     key: cls,
   }))
 
-  const nicheMap: Record<string, number> = {}
-  for (const lead of leads) {
-    const niche = lead.niche?.trim() || 'Sem nicho'
-    nicheMap[niche] = (nicheMap[niche] ?? 0) + 1
-  }
-  const nicheData = Object.entries(nicheMap).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([name, count]) => ({ name, count }))
+  const nicheData = (dashboard?.topNiches ?? []).map((r) => ({
+    name: r.niche?.trim() || 'Sem nicho',
+    count: r.count,
+  }))
 
-  const stageMap: Record<string, number> = {}
-  for (const lead of leads) {
-    const stage = lead.pipelineStage?.toLowerCase() || 'new'
-    stageMap[stage] = (stageMap[stage] ?? 0) + 1
-  }
+  const stageMap: Record<string, number> = dashboard?.leads.byPipelineStage ?? {}
   const maxStageCount = Math.max(1, ...Object.values(stageMap))
   const stageRows = STAGE_ORDER.map((stage) => ({ stage, label: STAGE_LABELS[stage] ?? stage, count: stageMap[stage] ?? 0 }))
 
