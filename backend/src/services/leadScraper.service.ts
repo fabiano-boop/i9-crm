@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { PrismaClient } from '@prisma/client';
 import { calculateLeadScore, getLeadTemperature } from '../utils/leadScorer.js';
+import { appendLeadToSheet } from './sheets.service.js';
 
 const prisma = new PrismaClient();
 
@@ -186,26 +187,46 @@ export async function runLeadScraper(): Promise<void> {
         const temperature = getLeadTemperature(score);
         const { dor, angulo, servicoRecomendado } = gerarDorEAngulo(place, segmento, bairro);
 
-        await prisma.lead.create({
-          data: {
-            name: place.displayName.text,
-            businessName: place.displayName.text,
-            niche: segmento.nicho,
-            neighborhood: bairro,
-            address: place.formattedAddress || `${bairro}, São Paulo - SP`,
-            phone: phone,
-            whatsapp: phone,
-            website: place.websiteUri || null,
-            score,
-            classification: temperature as any,
-            whatsappAngle: angulo,
-            painPoints: dor,
-            idealService: servicoRecomendado,
-            source: 'google_places_scraper',
-            status: 'NEW',
-            googleRating: place.rating || null,
-            reviewCount: place.userRatingCount || null,
-          },
+        const leadData = {
+          name: place.displayName.text,
+          businessName: place.displayName.text,
+          niche: segmento.nicho,
+          neighborhood: bairro,
+          address: place.formattedAddress || `${bairro}, São Paulo - SP`,
+          phone: phone,
+          whatsapp: phone,
+          website: place.websiteUri || null,
+          score,
+          classification: temperature as any,
+          whatsappAngle: angulo,
+          painPoints: dor,
+          idealService: servicoRecomendado,
+          source: 'google_places_scraper',
+          status: 'NEW' as const,
+          googleRating: place.rating || null,
+          reviewCount: place.userRatingCount || null,
+        };
+
+        await prisma.lead.create({ data: leadData });
+
+        // Adiciona nova linha no final da planilha (nunca sobrescreve)
+        await appendLeadToSheet({
+          name: leadData.name,
+          businessName: leadData.businessName,
+          niche: leadData.niche,
+          neighborhood: leadData.neighborhood,
+          address: leadData.address,
+          phone: leadData.phone,
+          googleRating: leadData.googleRating,
+          reviewCount: leadData.reviewCount,
+          website: leadData.website ?? '',
+          score: leadData.score,
+          classification: leadData.classification,
+          whatsappAngle: leadData.whatsappAngle,
+          painPoints: leadData.painPoints,
+          idealService: leadData.idealService,
+          source: leadData.source,
+          status: leadData.status,
         });
 
         inserted++;

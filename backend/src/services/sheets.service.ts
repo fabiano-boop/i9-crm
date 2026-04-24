@@ -72,7 +72,7 @@ function enrichWithMarketIntelligence(
   }
 }
 
-function getSheets(): sheets_v4.Sheets {
+function buildCredentials(): Record<string, unknown> {
   if (!env.GOOGLE_SERVICE_ACCOUNT_JSON) {
     throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON não configurado')
   }
@@ -84,7 +84,6 @@ function getSheets(): sheets_v4.Sheets {
     throw new Error('GOOGLE_SERVICE_ACCOUNT_JSON inválido — JSON malformado. Verifique se não há quebras de linha.')
   }
 
-  // Detecta credencial de aplicação web (type != service_account) — erro comum
   if (credentials.type !== 'service_account') {
     const got = credentials.type ?? (credentials.web ? 'web (OAuth client)' : 'desconhecido')
     throw new Error(
@@ -94,14 +93,25 @@ function getSheets(): sheets_v4.Sheets {
     )
   }
 
-  // Corrige \n escapados no private_key (problema comum ao colar JSON em env vars)
   if (typeof credentials.private_key === 'string') {
     credentials = { ...credentials, private_key: credentials.private_key.replace(/\\n/g, '\n') }
   }
 
+  return credentials
+}
+
+function getSheets(): sheets_v4.Sheets {
   const auth = new google.auth.GoogleAuth({
-    credentials,
+    credentials: buildCredentials(),
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+  })
+  return google.sheets({ version: 'v4', auth })
+}
+
+function getSheetsWrite(): sheets_v4.Sheets {
+  const auth = new google.auth.GoogleAuth({
+    credentials: buildCredentials(),
+    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
   })
   return google.sheets({ version: 'v4', auth })
 }
@@ -298,4 +308,81 @@ export async function syncFromSheets(): Promise<SyncResult> {
   })
 
   return result
+}
+
+// ── Append: scraper → planilha ────────────────────────────────────────────────
+// Usa INSERT_ROWS para nunca sobrescrever linhas existentes.
+export interface LeadSheetRow {
+  name: string
+  businessName?: string
+  niche?: string
+  neighborhood?: string
+  address?: string
+  phone?: string
+  googleRating?: number | null
+  reviewCount?: number | null
+  website?: string
+  instagram?: string
+  digitalLevel?: string
+  painPoints?: string
+  idealService?: string
+  upsellService?: string
+  urgency?: number
+  revenuePotential?: string
+  closingEase?: string
+  score?: number
+  classification?: string
+  whatsappAngle?: string
+  status?: string
+  source?: string
+  notes?: string
+}
+
+export async function appendLeadToSheet(lead: LeadSheetRow): Promise<void> {
+  if (!env.GOOGLE_SHEETS_ID || !env.GOOGLE_SERVICE_ACCOUNT_JSON) return
+
+  // Ordem das colunas: A=dataCap B=nome C=nicho D=bairro E=endereco F=telefone
+  // G=avalGoog H=reviews I=site J=instagram K=nivelDigital L=dores M=servPrincipal
+  // N=servUpsell O=urgencia P=fatPotencial Q=facilFechamento R=score S=classificacao
+  // T=anguloWha U=status V=responsavel W=observacoes X=nomeNegocio
+  const row = [
+    new Date().toLocaleDateString('pt-BR'),
+    lead.name ?? '',
+    lead.niche ?? '',
+    lead.neighborhood ?? '',
+    lead.address ?? '',
+    lead.phone ?? '',
+    lead.googleRating ?? '',
+    lead.reviewCount ?? '',
+    lead.website ?? '',
+    lead.instagram ?? '',
+    lead.digitalLevel ?? 'LOW',
+    lead.painPoints ?? '',
+    lead.idealService ?? '',
+    lead.upsellService ?? '',
+    lead.urgency ?? 5,
+    lead.revenuePotential ?? '',
+    lead.closingEase ?? '',
+    lead.score ?? 0,
+    lead.classification ?? 'COLD',
+    lead.whatsappAngle ?? '',
+    lead.status ?? 'NEW',
+    lead.source ?? '',
+    lead.notes ?? '',
+    lead.businessName ?? lead.name ?? '',
+  ]
+
+  try {
+    const sheets = getSheetsWrite()
+    await sheets.spreadsheets.values.append({
+      spreadsheetId: env.GOOGLE_SHEETS_ID,
+      range: 'Leads!A:X',
+      valueInputOption: 'USER_ENTERED',
+      insertDataOption: 'INSERT_ROWS',
+      requestBody: { values: [row] },
+    })
+    logger.info({ name: lead.name }, 'Lead adicionado à planilha via append')
+  } catch (err) {
+    logger.warn({ err, name: lead.name }, 'Falha ao fazer append do lead na planilha — lead já salvo no banco')
+  }
 }
