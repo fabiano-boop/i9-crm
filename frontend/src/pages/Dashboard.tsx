@@ -10,8 +10,7 @@ const STAGE_LABELS: Record<string, string> = {
 const STAGE_ORDER = ['new', 'contacted', 'replied', 'proposal', 'negotiation', 'closed', 'lost']
 
 export default function Dashboard() {
-  const [hotLeads, setHotLeads]           = useState<Lead[]>([])
-  const [byPipelineStage, setByPipelineStage] = useState<Record<string, number>>({})
+  const [hotLeads, setHotLeads]       = useState<Lead[]>([])
   const [campaigns, setCampaigns]     = useState<Campaign[]>([])
   const [topAlerts, setTopAlerts]     = useState<OpportunityAlert[]>([])
   const [totalLeads, setTotalLeads]   = useState(0)
@@ -24,12 +23,13 @@ export default function Dashboard() {
   // SPRINT 3.4: alertas inteligentes + meta MRR
   const [smartAlerts, setSmartAlerts] = useState<SmartAlert[]>([])
   const [mrrGoal, setMrrGoal]         = useState(0)
+  const [pipelineMap, setPipelineMap] = useState<Record<string, number>>({})
 
   useEffect(() => {
     async function load() {
       try {
-        const [dashRes, hotRes, warmRes, campaignRes, alertsRes, financialRes, comparisonRes, smartRes, settingsRes] = await Promise.all([
-          analyticsApi.dashboard(),
+        const [allRes, hotRes, warmRes, campaignRes, alertsRes, financialRes, comparisonRes, smartRes, settingsRes, dashRes] = await Promise.all([
+          leadsApi.list({ limit: 200 }),
           leadsApi.list({ classification: 'HOT', limit: 5 }),
           leadsApi.list({ classification: 'WARM', limit: 1 }),
           campaignsApi.list({ limit: 10 }),
@@ -39,18 +39,19 @@ export default function Dashboard() {
           // SPRINT 3.4: alertas inteligentes + meta MRR
           alertsApi.smart().catch(() => null),
           settingsApi.get().catch(() => null),
+          analyticsApi.dashboard().catch(() => null),
         ])
-        setTotalLeads(dashRes.data.leads.total)
+        setTotalLeads(allRes.data.meta.total)
         setTotalHot(hotRes.data.meta.total)
         setTotalWarm(warmRes.data.meta.total)
         setHotLeads(hotRes.data.data)
-        setByPipelineStage(dashRes.data.leads.byPipelineStage)
         setCampaigns(campaignRes.data.data)
         setTopAlerts(alertsRes.data.data)
         if (financialRes?.data?.summary) setFinancial(financialRes.data.summary)
         if (comparisonRes?.data) setComparison(comparisonRes.data)
         if (smartRes?.data) setSmartAlerts(smartRes.data)
         if (settingsRes?.data?.monthlyMrrGoal) setMrrGoal(settingsRes.data.monthlyMrrGoal)
+        if (dashRes?.data?.leads?.byPipelineStage) setPipelineMap(dashRes.data.leads.byPipelineStage)
       } finally {
         setLoading(false)
       }
@@ -58,9 +59,9 @@ export default function Dashboard() {
     load()
   }, [])
 
-  // Pipeline funnel counts — usa groupBy do backend (todos os leads, sem limite)
+  // Pipeline funnel counts — usa groupBy do servidor (sem limite)
   const stageCounts = STAGE_ORDER.reduce((acc, s) => {
-    acc[s] = byPipelineStage[s] ?? 0
+    acc[s] = pipelineMap[s] ?? 0
     return acc
   }, {} as Record<string, number>)
   const maxCount = Math.max(...Object.values(stageCounts), 1)
