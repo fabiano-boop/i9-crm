@@ -10,8 +10,8 @@ const STAGE_LABELS: Record<string, string> = {
 const STAGE_ORDER = ['new', 'contacted', 'replied', 'proposal', 'negotiation', 'closed', 'lost']
 
 export default function Dashboard() {
-  const [hotLeads, setHotLeads]       = useState<Lead[]>([])
-  const [allLeads, setAllLeads]       = useState<Lead[]>([])
+  const [hotLeads, setHotLeads]           = useState<Lead[]>([])
+  const [byPipelineStage, setByPipelineStage] = useState<Record<string, number>>({})
   const [campaigns, setCampaigns]     = useState<Campaign[]>([])
   const [topAlerts, setTopAlerts]     = useState<OpportunityAlert[]>([])
   const [totalLeads, setTotalLeads]   = useState(0)
@@ -28,8 +28,8 @@ export default function Dashboard() {
   useEffect(() => {
     async function load() {
       try {
-        const [allRes, hotRes, warmRes, campaignRes, alertsRes, financialRes, comparisonRes, smartRes, settingsRes] = await Promise.all([
-          leadsApi.list({ limit: 200 }),
+        const [dashRes, hotRes, warmRes, campaignRes, alertsRes, financialRes, comparisonRes, smartRes, settingsRes] = await Promise.all([
+          analyticsApi.dashboard(),
           leadsApi.list({ classification: 'HOT', limit: 5 }),
           leadsApi.list({ classification: 'WARM', limit: 1 }),
           campaignsApi.list({ limit: 10 }),
@@ -40,11 +40,11 @@ export default function Dashboard() {
           alertsApi.smart().catch(() => null),
           settingsApi.get().catch(() => null),
         ])
-        setTotalLeads(allRes.data.meta.total)
+        setTotalLeads(dashRes.data.leads.total)
         setTotalHot(hotRes.data.meta.total)
         setTotalWarm(warmRes.data.meta.total)
         setHotLeads(hotRes.data.data)
-        setAllLeads(allRes.data.data)
+        setByPipelineStage(dashRes.data.leads.byPipelineStage)
         setCampaigns(campaignRes.data.data)
         setTopAlerts(alertsRes.data.data)
         if (financialRes?.data?.summary) setFinancial(financialRes.data.summary)
@@ -58,9 +58,9 @@ export default function Dashboard() {
     load()
   }, [])
 
-  // Pipeline funnel counts
+  // Pipeline funnel counts — usa groupBy do backend (todos os leads, sem limite)
   const stageCounts = STAGE_ORDER.reduce((acc, s) => {
-    acc[s] = allLeads.filter((l) => (l.pipelineStage || 'new') === s).length
+    acc[s] = byPipelineStage[s] ?? 0
     return acc
   }, {} as Record<string, number>)
   const maxCount = Math.max(...Object.values(stageCounts), 1)
