@@ -116,7 +116,7 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
     if (ok) {
       await prisma.lead.update({
         where: { id: cl.leadId },
-        data: { status: 'CONTACTED' },
+        data: { status: 'CONTACTED', pipelineStage: 'CONTACTED', lastContactAt: new Date() },
       })
       sent++
     } else {
