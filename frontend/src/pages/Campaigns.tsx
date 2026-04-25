@@ -1,6 +1,24 @@
 import { useEffect, useRef, useState } from 'react'
 import { campaignsApi, leadsApi, type Campaign, type Lead } from '../services/api'
 
+const NICHE_GROUPS: Record<string, string[]> = {
+  'Beleza & Estética': ['Salão de Beleza', 'Barbearia', 'Manicure', 'Maquiagem', 'Estética', 'Beleza'],
+  'Saúde & Bem-estar': ['Academia', 'Pilates', 'Yoga', 'Personal Trainer', 'Fisioterapia', 'Nutrição', 'Psicologia', 'Clínica de Psicologia', 'Fitness', 'Saúde'],
+  'Alimentação': ['Restaurante', 'Lanchonete', 'Confeitaria', 'Buffet', 'Buffet Infantil', 'Alimentação', 'Adega'],
+  'Serviços': ['Eletricista', 'Desentupimento', 'Borracharia', 'Mecânica', 'Reformas', 'Chaveiro', 'Climatização', 'Pintura', 'Serviços Domésticos', 'Transporte', 'Segurança', 'Automotivo'],
+  'Saúde Profissional': ['Odontologia', 'Advocacia', 'Contabilidade', 'TI'],
+  'Moda & Varejo': ['Moda', 'Moda Infantil', 'Gráfica', 'Design', 'Fotografia', 'Eventos'],
+  'Educação & Outros': ['Educação', 'Auto Escola', 'Pet Shop', 'Dança', 'Pet'],
+}
+
+function detectNicheGroup(campaignName: string): string | null {
+  const lower = campaignName.toLowerCase()
+  for (const group of Object.keys(NICHE_GROUPS)) {
+    if (lower.includes(group.toLowerCase())) return group
+  }
+  return null
+}
+
 const STATUS_LABEL: Record<string, string> = { DRAFT: 'Rascunho', SCHEDULED: 'Agendada', RUNNING: 'Enviando', PAUSED: 'Pausada', COMPLETED: 'Concluída' }
 const STATUS_STYLE: Record<string, { bg: string; color: string }> = {
   DRAFT:     { bg: 'rgba(100,116,139,0.2)', color: '#94a3b8' },
@@ -320,6 +338,7 @@ export default function Campaigns() {
   const [showAddLeads, setShowAddLeads] = useState(false)
   const [leads, setLeads] = useState<Lead[]>([])
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([])
+  const [nicheGroup, setNicheGroup] = useState<string | null>(null)
 
   useEffect(() => { fetchCampaigns() }, [])
 
@@ -340,7 +359,9 @@ export default function Campaigns() {
 
   async function openAddLeads(campaign: Campaign) {
     setSelected(campaign); setSelectedLeadIds([])
-    const { data } = await leadsApi.list({ limit: 100 }); setLeads(data.data); setShowAddLeads(true)
+    const group = detectNicheGroup(campaign.name)
+    setNicheGroup(group)
+    const { data } = await leadsApi.list({ limit: 500 }); setLeads(data.data); setShowAddLeads(true)
   }
 
   async function handleAddLeads() {
@@ -349,6 +370,21 @@ export default function Campaigns() {
   }
 
   function toggleLead(id: string) { setSelectedLeadIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]) }
+
+  const filteredLeads = nicheGroup
+    ? leads.filter((l) => NICHE_GROUPS[nicheGroup]?.some((n) => n.toLowerCase() === l.niche?.toLowerCase()))
+    : leads
+
+  const allFiltered = filteredLeads.length > 0 && filteredLeads.every((l) => selectedLeadIds.includes(l.id))
+  const someFiltered = !allFiltered && filteredLeads.some((l) => selectedLeadIds.includes(l.id))
+
+  function toggleAll() {
+    if (allFiltered) {
+      setSelectedLeadIds((prev) => prev.filter((id) => !filteredLeads.some((l) => l.id === id)))
+    } else {
+      setSelectedLeadIds((prev) => [...new Set([...prev, ...filteredLeads.map((l) => l.id)])])
+    }
+  }
 
   return (
     <div className="p-6">
@@ -418,9 +454,26 @@ export default function Campaigns() {
               <button onClick={() => setShowAddLeads(false)} className="text-xl" style={{ color: '#7EAFC4' }}>×</button>
             </div>
             <div className="flex-1 overflow-y-auto p-4">
-              <p className="text-sm mb-3" style={{ color: '#7EAFC4' }}>{selectedLeadIds.length} selecionados</p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-sm" style={{ color: '#7EAFC4' }}>
+                  {selectedLeadIds.length} selecionados
+                  {nicheGroup && <span className="ml-2 text-xs px-2 py-0.5 rounded-full" style={{ background: 'rgba(0,200,232,0.12)', color: '#00C8E8' }}>Nicho: {nicheGroup}</span>}
+                </p>
+                <p className="text-xs" style={{ color: '#3E6A80' }}>{filteredLeads.length} leads</p>
+              </div>
+              <label className="flex items-center gap-3 p-2 mb-1 rounded-lg cursor-pointer" style={{ borderBottom: '1px solid rgba(0,200,232,0.1)' }}>
+                <input
+                  type="checkbox"
+                  checked={allFiltered}
+                  ref={(el) => { if (el) el.indeterminate = someFiltered }}
+                  onChange={toggleAll}
+                  className="rounded"
+                  style={{ accentColor: '#00C8E8' }}
+                />
+                <span className="text-sm font-medium" style={{ color: '#A8CCE0' }}>Selecionar todos ({filteredLeads.length})</span>
+              </label>
               <div className="space-y-2">
-                {leads.map((lead) => (
+                {filteredLeads.map((lead) => (
                   <label key={lead.id} className="flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors"
                     onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,200,232,0.04)')}
                     onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
