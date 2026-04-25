@@ -56,20 +56,18 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 })
 
 async function ensureAdminExists() {
-  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' } })
-  if (!admin) {
-    const bcrypt = await import('bcryptjs')
-    const hash = await bcrypt.hash('i9admin2024', 10)
-    await prisma.user.create({
-      data: {
-        name: 'Fabiano Admin',
-        email: 'admin@i9solucoes.com.br',
-        passwordHash: hash,
-        role: 'ADMIN',
-      },
-    })
-    logger.info('Admin criado automaticamente')
-  }
+  await prisma.user.upsert({
+    where: { id: 'admin-i9-fixo-0000-0000-000000000001' },
+    update: {},
+    create: {
+      id: 'admin-i9-fixo-0000-0000-000000000001',
+      name: 'Fabiano Admin',
+      email: 'admin@i9solucoes.com.br',
+      passwordHash: await (await import('bcryptjs')).hash('i9admin2024', 10),
+      role: 'ADMIN',
+    },
+  })
+  logger.info('Admin verificado (upsert por ID fixo)')
 }
 
 // Graceful shutdown
