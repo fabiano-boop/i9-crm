@@ -234,6 +234,7 @@ export interface Campaign {
   bodyHtml?: string
   scheduledAt?: string
   sentAt?: string
+  pauseReason?: string | null
   createdAt: string
   updatedAt: string
   createdBy?: { id: string; name: string }

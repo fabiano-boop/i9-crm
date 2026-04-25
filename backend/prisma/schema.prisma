@@ -143,6 +143,7 @@ model Campaign {
   bodyHtml      String?        // corpo do email em HTML
   scheduledAt   DateTime?
   sentAt        DateTime?
+  pauseReason   String?        // "DAILY_LIMIT_REACHED" | null
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
   createdBy     User           @relation(fields: [createdById], references: [id])
@@ -452,4 +453,20 @@ model Invoice {
 
   @@index([clientId, status])
   @@index([dueDate, status])
+}
+
+// =====================
+// ANTI-BAN WHATSAPP
+// =====================
+
+model WhatsAppDailyStats {
+  id   String @id @default(cuid())
+  date String @unique  // "YYYY-MM-DD"
+  sent Int    @default(0)
+}
+
+model WhatsAppConfig {
+  id               String   @id @default("default")
+  warmupStartDate  DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }

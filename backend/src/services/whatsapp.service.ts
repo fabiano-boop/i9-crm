@@ -16,10 +16,41 @@ function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '')
 }
 
-// Delay aleatório entre 30-60s para parecer humano
+// Delay aleatório entre 45-90s (anti-ban)
 function humanDelay(): Promise<void> {
-  const ms = 30_000 + Math.random() * 30_000
+  const ms = 45_000 + Math.random() * 45_000
   return new Promise((r) => setTimeout(r, ms))
+}
+
+// Limite diário pelo dia de warm-up:
+// Dia 1-7: 20 | Dia 8-30: 50 | Dia 31-90: 80 | Dia 91+: 150
+function getDailyLimit(warmupDay: number): number {
+  if (warmupDay <= 7) return 20
+  if (warmupDay <= 30) return 50
+  if (warmupDay <= 90) return 80
+  return 150
+}
+
+// Retorna quantas mensagens foram enviadas hoje e o limite do dia
+async function getAntiBanStatus(): Promise<{ sentToday: number; limit: number; warmupDay: number }> {
+  const today = new Date().toISOString().split('T')[0]
+
+  const [stats, config] = await Promise.all([
+    prisma.whatsAppDailyStats.findUnique({ where: { date: today } }),
+    prisma.whatsAppConfig.upsert({ where: { id: 'default' }, create: {}, update: {} }),
+  ])
+
+  const warmupDay = Math.max(1, Math.floor((Date.now() - config.warmupStartDate.getTime()) / 86_400_000) + 1)
+  return { sentToday: stats?.sent ?? 0, limit: getDailyLimit(warmupDay), warmupDay }
+}
+
+async function incrementDailyCounter(): Promise<void> {
+  const today = new Date().toISOString().split('T')[0]
+  await prisma.whatsAppDailyStats.upsert({
+    where: { date: today },
+    create: { date: today, sent: 1 },
+    update: { sent: { increment: 1 } },
+  })
 }
 
 // Normaliza número para formato Whapi: 5511999999999
@@ -73,12 +104,24 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
     include: { lead: true },
   })
 
-  logger.info({ campaignId, total: pendingLeads.length }, 'Iniciando disparo WhatsApp')
+  const { sentToday: initialSent, limit, warmupDay } = await getAntiBanStatus()
+  logger.info({ campaignId, total: pendingLeads.length, limit, warmupDay, sentToday: initialSent }, 'Iniciando disparo WhatsApp')
 
   let sent = 0
   let failed = 0
 
   for (const cl of pendingLeads) {
+    // Verificar limite diário antes de cada envio
+    const { sentToday } = await getAntiBanStatus()
+    if (sentToday >= limit) {
+      logger.warn({ campaignId, sentToday, limit, warmupDay }, 'Limite diário atingido — pausando campanha')
+      await prisma.campaign.update({
+        where: { id: campaignId },
+        data: { status: 'PAUSED', pauseReason: 'DAILY_LIMIT_REACHED' },
+      })
+      return
+    }
+
     const lead = cl.lead
     const phone = lead.whatsapp ?? lead.phone ?? ''
     if (!phone) {
@@ -114,6 +157,7 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
     })
 
     if (ok) {
+      await incrementDailyCounter()
       await prisma.lead.update({
         where: { id: cl.leadId },
         data: { status: 'CONTACTED', pipelineStage: 'CONTACTED', lastContactAt: new Date() },
@@ -128,7 +172,7 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
 
   await prisma.campaign.update({
     where: { id: campaignId },
-    data: { status: 'COMPLETED' },
+    data: { status: 'COMPLETED', pauseReason: null },
   })
 
   logger.info({ campaignId, sent, failed }, 'Disparo WhatsApp concluído')

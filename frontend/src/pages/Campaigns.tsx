@@ -400,6 +400,15 @@ export default function Campaigns() {
 
       {view === 'new' && <CampaignWizard onDone={async () => { setView('list'); await fetchCampaigns() }} onCancel={() => setView('list')} />}
 
+      {view === 'list' && campaigns.some((c) => c.pauseReason === 'DAILY_LIMIT_REACHED') && (
+        <div className="flex items-start gap-3 rounded-xl px-4 py-3 mb-4" style={{ background: 'rgba(234,179,8,0.12)', border: '1px solid rgba(234,179,8,0.35)' }}>
+          <span className="text-lg shrink-0">⚠️</span>
+          <p className="text-sm" style={{ color: '#fbbf24' }}>
+            <span className="font-semibold">Limite diário atingido</span> — campanha pausada automaticamente para proteger o número. Retoma amanhã.
+          </p>
+        </div>
+      )}
+
       {view === 'list' && (
         <div className="space-y-3">
           {loading ? (
