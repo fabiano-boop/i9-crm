@@ -59,6 +59,7 @@ async function ensureAdminExists() {
   try {
     const { default: bcrypt } = await import('bcryptjs')
 
+    // Tenta inserir — ignora se o ID já existe
     await prisma.$executeRaw`
       INSERT INTO "User" (id, name, email, "passwordHash", role, "createdAt")
       VALUES (
@@ -70,6 +71,14 @@ async function ensureAdminExists() {
         NOW()
       )
       ON CONFLICT (id) DO NOTHING
+    `
+
+    // Se o email já existia com outro ID (ex: 'user_admin_01'), migra para o ID fixo
+    await prisma.$executeRaw`
+      UPDATE "User"
+      SET id = 'admin-i9-fixo-0000-0000-000000000001'
+      WHERE email = 'admin@i9solucoes.com.br'
+        AND id != 'admin-i9-fixo-0000-0000-000000000001'
     `
 
     // Vincular leads sem responsável ao admin
