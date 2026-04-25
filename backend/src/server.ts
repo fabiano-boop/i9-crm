@@ -56,18 +56,32 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 })
 
 async function ensureAdminExists() {
-  await prisma.user.upsert({
-    where: { id: 'admin-i9-fixo-0000-0000-000000000001' },
-    update: {},
-    create: {
-      id: 'admin-i9-fixo-0000-0000-000000000001',
-      name: 'Fabiano Admin',
-      email: 'admin@i9solucoes.com.br',
-      passwordHash: await (await import('bcryptjs')).hash('i9admin2024', 10),
-      role: 'ADMIN',
-    },
-  })
-  logger.info('Admin verificado (upsert por ID fixo)')
+  try {
+    const { default: bcrypt } = await import('bcryptjs')
+
+    await prisma.$executeRaw`
+      INSERT INTO "User" (id, name, email, "passwordHash", role, "createdAt")
+      VALUES (
+        'admin-i9-fixo-0000-0000-000000000001',
+        'Fabiano Admin',
+        'admin@i9solucoes.com.br',
+        ${await bcrypt.hash('i9admin2024', 10)},
+        'ADMIN',
+        NOW()
+      )
+      ON CONFLICT (id) DO NOTHING
+    `
+
+    // Vincular leads sem responsável ao admin
+    await prisma.$executeRaw`
+      UPDATE "Lead" SET "assignedToId" = 'admin-i9-fixo-0000-0000-000000000001'
+      WHERE "assignedToId" IS NULL
+    `
+
+    console.log('Admin garantido com ID fixo')
+  } catch (err) {
+    console.error('ensureAdminExists erro:', err)
+  }
 }
 
 // Graceful shutdown
