@@ -25,31 +25,32 @@ const NICHE_GROUPS: Record<string, string[]> = {
 }
 
 // Mensagens consultivas por grupo — usam {{nome}}, {{negocio}}, {{bairro}}, {{nicho}}
+// Tom: próximo, humano, consultivo. Foco em dor específica do segmento + urgência da promoção.
 const NICHE_MESSAGES: Record<string, string> = {
   'Beleza & Estética':
-    'Olá, {{nome}}! 👋\n\nVi que o {{negocio}} atua com {{nicho}} em {{bairro}} e identifiquei algumas oportunidades para lotar sua agenda com clientes novos.\n\nMuitos salões e clínicas estéticas perdem até 40% dos clientes por falta de presença digital consistente — Google Meu Negócio mal otimizado, sem estratégia de retenção e dependendo só do boca a boca.\n\nA i9 Soluções trabalha exatamente com isso: tráfego pago segmentado para o bairro e estratégias de fidelização que fazem o cliente voltar.\n\nTeria 10 minutos para uma conversa rápida? 🗓️',
+    'Olá, {{nome}}! Tudo bem?\n\nVi que o {{negocio}} está em {{bairro}} e queria entender como está a captação de clientes novos por lá — Instagram, Google, indicação?\n\nEstou ajudando salões e barbearias da Zona Leste a lotar a agenda com redes sociais que realmente convertem. Tem 10 minutos pra gente conversar?',
 
   'Saúde & Bem-estar':
-    'Olá, {{nome}}! 👋\n\nTrabalho com marketing digital para academias, estúdios e clínicas em {{bairro}} e percebi que muitos negócios de {{nicho}} sofrem com o mesmo problema: agenda cheia em janeiro e vazia em junho.\n\nA i9 Soluções tem uma estratégia específica para manter o fluxo de alunos/pacientes constante o ano todo, sem depender de sazonalidade.\n\nPosteria me contar como está a situação do {{negocio}} atualmente? Tenho um case do seu segmento que pode te interessar. 💪',
+    'Olá, {{nome}}! Tudo bem?\n\nSou da i9 Soluções e trabalho com academias, estúdios e clínicas aqui na Zona Leste. A maioria sofre com o mesmo problema: agenda cheia em janeiro e pela metade em julho.\n\nTenho uma estratégia específica pra isso. Posso te contar em 10 minutos como funciona pro {{negocio}}?',
 
   'Alimentação':
-    'Olá, {{nome}}! 👋\n\nSei que restaurantes e lanchonetes como o {{negocio}} sofrem com movimento fraco nos dias de semana e a concorrência crescente dos apps de delivery.\n\nA i9 Soluções tem ajudado negócios de alimentação em {{bairro}} a aumentar o fluxo presencial com campanhas hiperlocais — anúncios mostrados só para quem está próximo e buscando onde comer agora.\n\nGostaria de ver como isso funcionou para um restaurante similar ao seu? 🍽️',
+    'Olá, {{nome}}! Tudo bem?\n\nVi o {{negocio}} em {{bairro}} e queria entender como está o movimento — delivery, reservas, clientes presenciais?\n\nEstou ajudando restaurantes e lanchonetes da região a aumentar o fluxo com campanhas hiperlocais. Teria 10 minutos pra conversar?',
 
   'Serviços':
-    'Olá, {{nome}}! 👋\n\nVi que o {{negocio}} oferece serviços de {{nicho}} em {{bairro}}. Tenho uma pergunta direta: quando alguém busca "{{nicho}} em {{bairro}}" no Google, você aparece?\n\nA i9 Soluções especializa em colocar prestadores de serviço no topo do Google Maps — clientes que te encontram lá têm 3x mais chance de fechar do que por indicação.\n\nPosso te mostrar em 10 minutos como está seu posicionamento hoje? 🔧',
+    'Olá, {{nome}}! Tudo bem?\n\nQuando alguém busca "{{nicho}} em {{bairro}}" no Google agora, o {{negocio}} aparece?\n\nEstou ajudando prestadores de serviço da Zona Leste a aparecer no topo do Google Maps. Posso te mostrar como está seu posicionamento hoje em 10 minutos?',
 
   'Saúde Profissional':
-    'Olá, {{nome}}! 👋\n\nProfissionais de {{nicho}} em {{bairro}} costumam depender muito de indicações, o que gera uma carteira de clientes irregular e imprevisível.\n\nA i9 Soluções trabalha com estratégias digitais para consultórios e escritórios atraírem clientes qualificados de forma consistente — sem precisar esperar alguém te indicar.\n\nTeria interesse em ver um case de um profissional do seu segmento? 📊',
+    'Olá, {{nome}}! Tudo bem?\n\nVi que o {{negocio}} atua com {{nicho}} em {{bairro}}. A maioria dos profissionais da área depende de indicação — o que deixa a carteira de clientes irregular.\n\nEstou ajudando consultórios e escritórios da Zona Leste a construir autoridade digital e captar clientes de forma previsível. Teria 10 minutos?',
 
   'Moda & Varejo':
-    'Olá, {{nome}}! 👋\n\nNegócios de {{nicho}} como o {{negocio}} têm um potencial enorme com a presença digital certa — Instagram bem posicionado, Google Meu Negócio otimizado e campanhas que atraem o cliente certo em {{bairro}}.\n\nA i9 Soluções está ajudando marcas da região a aumentar o alcance sem precisar de um time de marketing completo — e com resultado medido em vendas reais.\n\nPosso te mostrar como em uma conversa rápida? 🛍️',
+    'Olá, {{nome}}! Tudo bem?\n\nVi o {{negocio}} em {{bairro}} e queria entender como está a presença de vocês no digital — Instagram, Google, anúncios?\n\nEstou ajudando negócios de moda e varejo da região a aumentar o alcance sem precisar de um time de marketing. Posso te mostrar como em 10 minutos?',
 
   'Educação & Outros':
-    'Olá, {{nome}}! 👋\n\nVi que o {{negocio}} atua com {{nicho}} em {{bairro}}. Negócios de educação e serviços especializados têm um desafio específico: atrair alunos e clientes novos fora dos períodos de pico.\n\nA i9 Soluções tem estratégias que mantêm o fluxo constante o ano todo — combinando presença no Google com campanhas segmentadas para o bairro.\n\nTeria 10 minutos para conversar sobre como está a captação no {{negocio}} hoje? 📚',
+    'Olá, {{nome}}! Tudo bem?\n\nVi que o {{negocio}} trabalha com {{nicho}} em {{bairro}}. Como está a captação de alunos/clientes novos — depende muito de indicação?\n\nEstou ajudando negócios de educação e serviços especializados da Zona Leste a manter o fluxo constante o ano todo. Teria 10 minutos pra conversar?',
 }
 
 const DEFAULT_MESSAGE =
-  'Olá, {{nome}}! 👋\n\nVi que o {{negocio}} atua em {{bairro}} e gostaria de apresentar como a i9 Soluções tem ajudado negócios da região a atrair mais clientes com marketing digital.\n\nTeria 10 minutos para uma conversa rápida? 🚀'
+  'Olá, {{nome}}! Tudo bem?\n\nVi o {{negocio}} em {{bairro}} e queria entender como está a presença digital de vocês.\n\nEstou ajudando negócios da Zona Leste a atrair mais clientes com marketing digital. Teria 10 minutos pra conversar?'
 
 // Retorna o grupo de nicho para um nicho dado, ou null se não mapeado
 export function getGroupForNiche(niche: string): string | null {

@@ -124,21 +124,37 @@ REGRAS ABSOLUTAS PARA WHATSAPP:
 - Emojis com moderação (máx 1 por mensagem, só se natural)
 - Nunca pareça estar lendo um script
 
-PACOTES DA I9 (apresente APENAS quando o lead perguntar preço OU demonstrar interesse claro):
+CONTEXTO DA OFERTA:
+- Somos uma agência nova buscando os 10 primeiros clientes da Zona Leste de SP
+- Preços são promocionais de lançamento — exclusivos para esses 10 clientes
+- Após fechar as vagas, os valores voltam ao normal (50-60% mais caros)
+- O número exato de vagas restantes está no CONTEXTO DO LEAD — use-o para criar urgência real
+- Crie senso de urgência genuíno: não exagere, mas deixe claro que é limitado
 
-SCRIPT DE APRESENTAÇÃO DE PLANOS (use este texto adaptado ao contexto):
-"Temos 3 opções com condição especial de lançamento para os 10 primeiros clientes:
-• START R$750/mês — presença digital + Google
-• GROWTH R$1.097/mês — tráfego pago + redes sociais
-• PREMIUM R$1.797/mês — solução completa
-Após as 10 vagas volta ao preço normal. Qual faz mais sentido pro [nome do negócio]?"
+PLANOS DE LANÇAMENTO (apresente só quando lead perguntar preço OU demonstrar interesse claro):
 
-REFERÊNCIA DE PREÇOS NORMAIS (após promoção):
-- Start R$997/mês → Presença digital, Google Meu Negócio otimizado, site básico
-- Growth R$1.497/mês → Tráfego pago (Meta + Google Ads), redes sociais, relatórios mensais
-- Premium R$2.497/mês → Tudo do Growth + estratégia completa, conteúdo profissional, CRM
+START R$750/mês (normal R$997):
+8 criativos/mês, gestão de perfis nas redes sociais, Google Meu Negócio otimizado, landing page incluída, postagem com legenda, relatório mensal de resultados.
 
-AO APRESENTAR PREÇO: use o script acima e contextualize com resultado esperado — nunca preço isolado.
+GROWTH R$1.097/mês (normal R$1.497):
+Tudo do START + tráfego pago (Google Ads e/ou Meta Ads), 12 criativos/mês, reels e stories, relatório semanal, reunião de alinhamento mensal.
+
+PREMIUM R$1.797/mês (normal R$2.497):
+Tudo do GROWTH + 2 canais de tráfego simultâneos, 16 criativos/mês, site completo (não só landing page), SEO local, reunião quinzenal, atendimento prioritário.
+
+SERVIÇOS AVULSOS — porta de entrada para leads que hesitam no valor mensal:
+- Landing Page R$897 (entrega única — ótimo ponto de entrada)
+- Criativo Avulso R$97/un ou pacote 10 por R$797
+- Consultoria Estratégica R$597 (2h + diagnóstico escrito)
+- Campanha Sazonal R$697 (setup + gestão 30 dias)
+
+SCRIPT DE APRESENTAÇÃO DE PLANOS (adapte ao contexto — nunca leia literalmente):
+"Tenho 3 opções com condição especial de lançamento, restam X vagas. START em R$750, GROWTH em R$1.097 e PREMIUM em R$1.797. Depois que fechar as vagas volta tudo ao preço normal. Qual faz mais sentido pro [negócio]?"
+
+AO APRESENTAR PREÇO:
+- Sempre contextualize com resultado esperado, nunca preço isolado
+- Sempre mencione as vagas restantes (número está no contexto)
+- Se lead hesitar no preço mensal, ofereça o avulso mais relevante como porta de entrada
 
 SINALIZAR stage=human_needed QUANDO:
 - Lead pediu proposta formal ou contrato
@@ -214,6 +230,10 @@ export async function processMessage(
   const pkg = PACKAGES[pkgKey]
   const history = buildHistory(lead.interactions)
 
+  // Vagas restantes na promoção de lançamento (10 primeiros clientes)
+  const activeClients = await prisma.client.count({ where: { status: 'ACTIVE' } }).catch(() => 0)
+  const vagasRestantes = Math.max(0, 10 - activeClients)
+
   // 3. Detectar objeção e verificar escalação imediata
   const objectionContext = getObjectionContext(incomingMessage)
   const forceEscalation  = requiresImmediateEscalation(incomingMessage)
@@ -226,6 +246,7 @@ export async function processMessage(
 - Score: ${lead.score}/100 | Classificação: ${lead.classification}
 - Pacote sugerido: ${pkg.name} (${pkg.price}) — ${pkg.tagline}
 - Status: ${lead.status} | Estágio atual: ${currentStage}
+- Vagas restantes na promoção: ${vagasRestantes} de 10 (use isso para criar urgência)
 ${forceEscalation ? '\n⚠️ IMPORTANTE: objeção crítica detectada — considere fortemente stage=human_needed' : ''}
 ${objectionContext}
 
