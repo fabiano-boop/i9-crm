@@ -3,7 +3,7 @@ import { useNavigate, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import * as Tabs from '@radix-ui/react-tabs'
+
 import { clientsApi, leadsApi, type CreateClientInput } from '../../services/api'
 
 const BAIRROS_ZONA_LESTE = [
@@ -131,93 +131,91 @@ export default function NewClient() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <Tabs.Root value={activeTab} onValueChange={setActiveTab}>
-          <div style={{ borderBottom: '1px solid rgba(0,200,232,0.12)', marginBottom: 0 }}>
-            <Tabs.List className="flex gap-1 px-1">
-              <Tabs.Trigger value="business" style={tabClass('business')}>1. Negócio</Tabs.Trigger>
-              <Tabs.Trigger value="contact"  style={tabClass('contact')}>2. Contato</Tabs.Trigger>
-              <Tabs.Trigger value="contract" style={tabClass('contract')}>3. Contrato</Tabs.Trigger>
-            </Tabs.List>
+        <div style={{ borderBottom: '1px solid rgba(0,200,232,0.12)', marginBottom: 0 }}>
+          <div className="flex gap-1 px-1">
+            <button type="button" onClick={() => setActiveTab('business')} style={tabClass('business')}>1. Negócio</button>
+            <button type="button" onClick={() => setActiveTab('contact')}  style={tabClass('contact')}>2. Contato</button>
+            <button type="button" onClick={() => setActiveTab('contract')} style={tabClass('contract')}>3. Contrato</button>
           </div>
+        </div>
 
-          <Tabs.Content value="business" forceMount style={{ ...tabContent, display: activeTab === 'business' ? 'block' : 'none' }}>
-            <div className="space-y-4">
-              <div><Label>Nome do negócio *</Label><Input {...register('businessName')} placeholder="Ex: Salão da Ana" error={errors.businessName?.message} /></div>
-              <div><Label>Nome do dono / responsável *</Label><Input {...register('ownerName')} placeholder="Nome completo" error={errors.ownerName?.message} /></div>
-              <div><Label>Nicho</Label><Select {...register('niche')} error={errors.niche?.message}><option value="">Selecionar nicho...</option>{NICHOS.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}</Select></div>
-              <div><Label>Bairro</Label><Select {...register('neighborhood')} error={errors.neighborhood?.message}><option value="">Selecionar bairro...</option>{BAIRROS_ZONA_LESTE.map(b => <option key={b} value={b}>{b}</option>)}</Select></div>
-              <div><Label>Endereço completo</Label><Input {...register('address')} placeholder="Rua, número, complemento" /></div>
-              <div><Label>Link do Google Maps (opcional)</Label><Input {...register('mapsLink')} placeholder="https://maps.google.com/..." error={errors.mapsLink?.message} /></div>
-              <div className="flex justify-end pt-2">
-                <button type="button" onClick={() => setActiveTab('contact')} className="px-5 py-2 rounded-lg text-sm" style={btnPrimary}>Próximo →</button>
+        <div style={{ ...tabContent, display: activeTab === 'business' ? 'block' : 'none' }}>
+          <div className="space-y-4">
+            <div><Label>Nome do negócio *</Label><Input {...register('businessName')} placeholder="Ex: Salão da Ana" error={errors.businessName?.message} /></div>
+            <div><Label>Nome do dono / responsável *</Label><Input {...register('ownerName')} placeholder="Nome completo" error={errors.ownerName?.message} /></div>
+            <div><Label>Nicho</Label><Select {...register('niche')} error={errors.niche?.message}><option value="">Selecionar nicho...</option>{NICHOS.map(n => <option key={n.value} value={n.value}>{n.label}</option>)}</Select></div>
+            <div><Label>Bairro</Label><Select {...register('neighborhood')} error={errors.neighborhood?.message}><option value="">Selecionar bairro...</option>{BAIRROS_ZONA_LESTE.map(b => <option key={b} value={b}>{b}</option>)}</Select></div>
+            <div><Label>Endereço completo</Label><Input {...register('address')} placeholder="Rua, número, complemento" /></div>
+            <div><Label>Link do Google Maps (opcional)</Label><Input {...register('mapsLink')} placeholder="https://maps.google.com/..." error={errors.mapsLink?.message} /></div>
+            <div className="flex justify-end pt-2">
+              <button type="button" onClick={() => setActiveTab('contact')} className="px-5 py-2 rounded-lg text-sm" style={btnPrimary}>Próximo →</button>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ ...tabContent, display: activeTab === 'contact' ? 'block' : 'none' }}>
+          <div className="space-y-4">
+            <div><Label>WhatsApp *</Label><Input {...register('whatsapp')} placeholder="(11) 98765-4321" error={errors.whatsapp?.message} /></div>
+            <div><Label>Email</Label><Input {...register('email')} type="email" placeholder="contato@negocio.com.br" error={errors.email?.message} /></div>
+            <div>
+              <Label>Instagram</Label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 text-sm" style={{ background: '#0A1E30', border: '1px solid rgba(0,200,232,0.18)', borderRight: 'none', borderRadius: '8px 0 0 8px', color: '#7EAFC4' }}>@</span>
+                <input {...register('instagram')} placeholder="nomedoperfil" style={{ ...inputStyle, borderRadius: '0 8px 8px 0' }} />
               </div>
             </div>
-          </Tabs.Content>
+            <div><Label>Site (URL)</Label><Input {...register('website')} placeholder="https://seunegocio.com.br" error={errors.website?.message} /></div>
+            <div className="flex justify-between pt-2">
+              <button type="button" onClick={() => setActiveTab('business')} className="text-sm px-4 py-2" style={{ color: '#7EAFC4' }}>← Voltar</button>
+              <button type="button" onClick={() => setActiveTab('contract')} className="px-5 py-2 rounded-lg text-sm" style={btnPrimary}>Próximo →</button>
+            </div>
+          </div>
+        </div>
 
-          <Tabs.Content value="contact" forceMount style={{ ...tabContent, display: activeTab === 'contact' ? 'block' : 'none' }}>
-            <div className="space-y-4">
-              <div><Label>WhatsApp *</Label><Input {...register('whatsapp')} placeholder="(11) 98765-4321" error={errors.whatsapp?.message} /></div>
-              <div><Label>Email</Label><Input {...register('email')} type="email" placeholder="contato@negocio.com.br" error={errors.email?.message} /></div>
-              <div>
-                <Label>Instagram</Label>
-                <div className="flex">
-                  <span className="inline-flex items-center px-3 text-sm" style={{ background: '#0A1E30', border: '1px solid rgba(0,200,232,0.18)', borderRight: 'none', borderRadius: '8px 0 0 8px', color: '#7EAFC4' }}>@</span>
-                  <input {...register('instagram')} placeholder="nomedoperfil" style={{ ...inputStyle, borderRadius: '0 8px 8px 0' }} />
-                </div>
-              </div>
-              <div><Label>Site (URL)</Label><Input {...register('website')} placeholder="https://seunegocio.com.br" error={errors.website?.message} /></div>
-              <div className="flex justify-between pt-2">
-                <button type="button" onClick={() => setActiveTab('business')} className="text-sm px-4 py-2" style={{ color: '#7EAFC4' }}>← Voltar</button>
-                <button type="button" onClick={() => setActiveTab('contract')} className="px-5 py-2 rounded-lg text-sm" style={btnPrimary}>Próximo →</button>
+        <div style={{ ...tabContent, display: activeTab === 'contract' ? 'block' : 'none' }}>
+          <div className="space-y-4">
+            <div>
+              <Label>Pacote contratado</Label>
+              <div className="grid grid-cols-3 gap-3 mt-1">
+                {PACOTES.map(p => (
+                  <label key={p.value} className="cursor-pointer rounded-xl p-3 text-center transition-colors"
+                    style={{ border: watchPackage === p.value ? '2px solid #00C8E8' : '2px solid rgba(0,200,232,0.15)', background: watchPackage === p.value ? 'rgba(0,200,232,0.08)' : 'transparent' }}>
+                    <input type="radio" value={p.value} {...register('package')} className="sr-only" />
+                    <p className="font-semibold text-sm" style={{ color: '#E8F4F8' }}>{p.label}</p>
+                    <p className="font-bold text-lg mt-0.5" style={{ color: '#00C8E8', fontFamily: 'monospace' }}>R${p.preco}</p>
+                    <p className="text-xs" style={{ color: '#7EAFC4' }}>/mês</p>
+                  </label>
+                ))}
               </div>
             </div>
-          </Tabs.Content>
-
-          <Tabs.Content value="contract" forceMount style={{ ...tabContent, display: activeTab === 'contract' ? 'block' : 'none' }}>
-            <div className="space-y-4">
-              <div>
-                <Label>Pacote contratado</Label>
-                <div className="grid grid-cols-3 gap-3 mt-1">
-                  {PACOTES.map(p => (
-                    <label key={p.value} className="cursor-pointer rounded-xl p-3 text-center transition-colors"
-                      style={{ border: watchPackage === p.value ? '2px solid #00C8E8' : '2px solid rgba(0,200,232,0.15)', background: watchPackage === p.value ? 'rgba(0,200,232,0.08)' : 'transparent' }}>
-                      <input type="radio" value={p.value} {...register('package')} className="sr-only" />
-                      <p className="font-semibold text-sm" style={{ color: '#E8F4F8' }}>{p.label}</p>
-                      <p className="font-bold text-lg mt-0.5" style={{ color: '#00C8E8', fontFamily: 'monospace' }}>R${p.preco}</p>
-                      <p className="text-xs" style={{ color: '#7EAFC4' }}>/mês</p>
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <Label>Valor mensal personalizado</Label>
-                <div className="flex">
-                  <span className="inline-flex items-center px-3 text-sm" style={{ background: '#0A1E30', border: '1px solid rgba(0,200,232,0.18)', borderRight: 'none', borderRadius: '8px 0 0 8px', color: '#7EAFC4' }}>R$</span>
-                  <input {...register('monthlyValue')} type="number" min="0" step="0.01" placeholder="0.00" style={{ ...inputStyle, borderRadius: '0 8px 8px 0' }} />
-                </div>
-              </div>
-              <div><Label>Data de início</Label><Input {...register('startDate')} type="date" defaultValue={new Date().toISOString().slice(0, 10)} /></div>
-              <div><Label>Origem</Label><Select {...register('origin')} error={errors.origin?.message}>{ORIGENS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</Select></div>
-              {watchOrigin === 'referral' && <div><Label>Quem indicou?</Label><Input {...register('referredBy')} placeholder="Nome do indicador" /></div>}
-              <div>
-                <Label>ID do Lead (se veio do CRM)</Label>
-                <Input {...register('leadId')} placeholder="Cole o ID do lead..." style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 12 }} />
-                <p className="text-xs mt-1" style={{ color: '#5A9AB5' }}>O lead será marcado como FECHADO automaticamente.</p>
-              </div>
-              <div>
-                <Label>Observações</Label>
-                <textarea {...register('notes')} rows={3} placeholder="Anotações internas, acordos especiais..." style={{ ...inputStyle, resize: 'none' }} />
-              </div>
-              {error && <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>{error}</div>}
-              <div className="flex justify-between pt-2">
-                <button type="button" onClick={() => setActiveTab('contact')} className="text-sm px-4 py-2" style={{ color: '#7EAFC4' }}>← Voltar</button>
-                <button type="button" disabled={saving} onClick={handleSubmit(onSubmit)} className="px-6 py-2 rounded-lg text-sm flex items-center gap-2 disabled:opacity-60" style={btnPrimary}>
-                  {saving ? <><span className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid rgba(6,20,34,0.3)', borderTop: '2px solid #061422' }} />Salvando...</> : '✓ Cadastrar cliente'}
-                </button>
+            <div>
+              <Label>Valor mensal personalizado</Label>
+              <div className="flex">
+                <span className="inline-flex items-center px-3 text-sm" style={{ background: '#0A1E30', border: '1px solid rgba(0,200,232,0.18)', borderRight: 'none', borderRadius: '8px 0 0 8px', color: '#7EAFC4' }}>R$</span>
+                <input {...register('monthlyValue')} type="number" min="0" step="0.01" placeholder="0.00" style={{ ...inputStyle, borderRadius: '0 8px 8px 0' }} />
               </div>
             </div>
-          </Tabs.Content>
-        </Tabs.Root>
+            <div><Label>Data de início</Label><Input {...register('startDate')} type="date" defaultValue={new Date().toISOString().slice(0, 10)} /></div>
+            <div><Label>Origem</Label><Select {...register('origin')} error={errors.origin?.message}>{ORIGENS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</Select></div>
+            {watchOrigin === 'referral' && <div><Label>Quem indicou?</Label><Input {...register('referredBy')} placeholder="Nome do indicador" /></div>}
+            <div>
+              <Label>ID do Lead (se veio do CRM)</Label>
+              <Input {...register('leadId')} placeholder="Cole o ID do lead..." style={{ ...inputStyle, fontFamily: 'monospace', fontSize: 12 }} />
+              <p className="text-xs mt-1" style={{ color: '#5A9AB5' }}>O lead será marcado como FECHADO automaticamente.</p>
+            </div>
+            <div>
+              <Label>Observações</Label>
+              <textarea {...register('notes')} rows={3} placeholder="Anotações internas, acordos especiais..." style={{ ...inputStyle, resize: 'none' }} />
+            </div>
+            {error && <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>{error}</div>}
+            <div className="flex justify-between pt-2">
+              <button type="button" onClick={() => setActiveTab('contact')} className="text-sm px-4 py-2" style={{ color: '#7EAFC4' }}>← Voltar</button>
+              <button type="submit" disabled={saving} className="px-6 py-2 rounded-lg text-sm flex items-center gap-2 disabled:opacity-60" style={btnPrimary}>
+                {saving ? <><span className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid rgba(6,20,34,0.3)', borderTop: '2px solid #061422' }} />Salvando...</> : '✓ Cadastrar cliente'}
+              </button>
+            </div>
+          </div>
+        </div>
       </form>
     </div>
   )
