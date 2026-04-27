@@ -27,7 +27,7 @@ export default function Sidebar() {
   const [dupCount, setDupCount]         = useState(0)
   const [handoffCount, setHandoffCount] = useState(0)
   const [clientsOpen, setClientsOpen]   = useState(
-    () => location.pathname.startsWith('/clients') || location.pathname === '/market-intelligence' || location.pathname.startsWith('/services')
+    () => location.pathname.startsWith('/clients') || location.pathname.startsWith('/services')
   )
 
   useEffect(() => {
@@ -46,14 +46,15 @@ export default function Sidebar() {
   }, [])
 
   useEffect(() => {
-    if (location.pathname.startsWith('/clients') || location.pathname === '/market-intelligence' || location.pathname.startsWith('/services')) {
+    if (location.pathname.startsWith('/clients') || location.pathname.startsWith('/services')) {
       setClientsOpen(true)
     }
   }, [location.pathname])
 
   const navItems = [
-    { to: '/dashboard',        label: 'Dashboard',     Icon: LayoutDashboard },
-    { to: '/leads',            label: 'Leads',         Icon: Users },
+    { to: '/dashboard',          label: 'Dashboard',        Icon: LayoutDashboard },
+    { to: '/market-intelligence', label: 'Intel. de Mercado', Icon: Globe },
+    { to: '/leads',              label: 'Leads',            Icon: Users },
     { to: '/leads/duplicates', label: 'Duplicatas',    Icon: Copy,       badge: dupCount      || undefined },
     { to: '/pipeline',         label: 'Pipeline',      Icon: GitBranch },
     { to: '/campaigns',        label: 'Campanhas',     Icon: Megaphone },
@@ -191,17 +192,6 @@ export default function Sidebar() {
                 Serviços
               </NavLink>
 
-              <NavLink
-                to="/market-intelligence"
-                className="flex items-center gap-2 pl-9 pr-3 py-2 rounded-lg text-sm transition-all"
-                style={({ isActive }) => ({
-                  color:      isActive ? '#00E5C8' : '#7EAFC4',
-                  background: isActive ? 'rgba(0,229,200,0.08)' : 'transparent',
-                })}
-              >
-                <Globe size={13} strokeWidth={1.8} />
-                Intel. de Mercado
-              </NavLink>
             </div>
           )}
         </div>
