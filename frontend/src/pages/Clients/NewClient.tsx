@@ -140,7 +140,7 @@ export default function NewClient() {
             </Tabs.List>
           </div>
 
-          <Tabs.Content value="business" style={tabContent}>
+          <Tabs.Content value="business" forceMount style={{ ...tabContent, display: activeTab === 'business' ? 'block' : 'none' }}>
             <div className="space-y-4">
               <div><Label>Nome do negócio *</Label><Input {...register('businessName')} placeholder="Ex: Salão da Ana" error={errors.businessName?.message} /></div>
               <div><Label>Nome do dono / responsável *</Label><Input {...register('ownerName')} placeholder="Nome completo" error={errors.ownerName?.message} /></div>
@@ -154,7 +154,7 @@ export default function NewClient() {
             </div>
           </Tabs.Content>
 
-          <Tabs.Content value="contact" style={tabContent}>
+          <Tabs.Content value="contact" forceMount style={{ ...tabContent, display: activeTab === 'contact' ? 'block' : 'none' }}>
             <div className="space-y-4">
               <div><Label>WhatsApp *</Label><Input {...register('whatsapp')} placeholder="(11) 98765-4321" error={errors.whatsapp?.message} /></div>
               <div><Label>Email</Label><Input {...register('email')} type="email" placeholder="contato@negocio.com.br" error={errors.email?.message} /></div>
@@ -173,7 +173,7 @@ export default function NewClient() {
             </div>
           </Tabs.Content>
 
-          <Tabs.Content value="contract" style={tabContent}>
+          <Tabs.Content value="contract" forceMount style={{ ...tabContent, display: activeTab === 'contract' ? 'block' : 'none' }}>
             <div className="space-y-4">
               <div>
                 <Label>Pacote contratado</Label>
