@@ -247,7 +247,7 @@ export async function processWhatsAppWebhook(body: Record<string, unknown>): Pro
     })
     const updates: Promise<unknown>[] = [
       prisma.interaction.create({ data: { leadId: lead.id, type: 'WHATSAPP', channel: 'whatsapp', content, direction: 'IN' } }),
-      prisma.lead.update({ where: { id: lead.id }, data: { status: 'REPLIED', lastContactAt: new Date() } }),
+      prisma.lead.update({ where: { id: lead.id }, data: { status: 'REPLIED', pipelineStage: 'replied', lastContactAt: new Date() } }),
     ]
     if (recentCampaignLead) {
       updates.push(
