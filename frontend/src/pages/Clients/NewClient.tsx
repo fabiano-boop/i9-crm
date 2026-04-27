@@ -152,7 +152,7 @@ export default function NewClient() {
           </div>
         </div>
 
-        <div style={{ ...tabContent, display: activeTab === 'business' ? 'block' : 'none' }}>
+        <div style={{ ...tabContent, visibility: activeTab === 'business' ? 'visible' : 'hidden', height: activeTab === 'business' ? 'auto' : 0, overflow: 'hidden' }}>
           <div className="space-y-4">
             <div><Label>Nome do negócio *</Label><Input {...register('businessName')} placeholder="Ex: Salão da Ana" error={errors.businessName?.message} /></div>
             <div><Label>Nome do dono / responsável *</Label><Input {...register('ownerName')} placeholder="Nome completo" error={errors.ownerName?.message} /></div>
@@ -166,7 +166,7 @@ export default function NewClient() {
           </div>
         </div>
 
-        <div style={{ ...tabContent, display: activeTab === 'contact' ? 'block' : 'none' }}>
+        <div style={{ ...tabContent, visibility: activeTab === 'contact' ? 'visible' : 'hidden', height: activeTab === 'contact' ? 'auto' : 0, overflow: 'hidden' }}>
           <div className="space-y-4">
             <div><Label>WhatsApp *</Label><Input {...register('whatsapp')} placeholder="(11) 98765-4321" error={errors.whatsapp?.message} /></div>
             <div><Label>Email</Label><Input {...register('email')} type="email" placeholder="contato@negocio.com.br" error={errors.email?.message} /></div>
@@ -185,13 +185,14 @@ export default function NewClient() {
           </div>
         </div>
 
-        <div style={{ ...tabContent, display: activeTab === 'contract' ? 'block' : 'none' }}>
+        <div style={{ ...tabContent, visibility: activeTab === 'contract' ? 'visible' : 'hidden', height: activeTab === 'contract' ? 'auto' : 0, overflow: 'hidden' }}>
           <div className="space-y-4">
             <div>
               <Label>Pacote contratado</Label>
               <div className="grid grid-cols-3 gap-3 mt-1">
                 {PACOTES.map(p => (
                   <label key={p.value} className="cursor-pointer rounded-xl p-3 text-center transition-colors"
+                    onClick={() => setValue('package', p.value as 'start' | 'growth' | 'premium')}
                     style={{ border: watchPackage === p.value ? '2px solid #00C8E8' : '2px solid rgba(0,200,232,0.15)', background: watchPackage === p.value ? 'rgba(0,200,232,0.08)' : 'transparent' }}>
                     <input type="radio" value={p.value} {...register('package')} className="sr-only" />
                     <p className="font-semibold text-sm" style={{ color: '#E8F4F8' }}>{p.label}</p>
