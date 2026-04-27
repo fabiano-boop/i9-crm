@@ -221,13 +221,13 @@ export default function Pipeline() {
           Carregando pipeline...
         </div>
       ) : (
-        <div className="flex-1 overflow-x-auto p-4">
+        <div className="flex-1 overflow-x-auto p-4" style={{ display: 'flex', height: 'calc(100vh - 160px)' }}>
           <DragDropContext onDragEnd={onDragEnd}>
             <div className="flex gap-3 h-full min-w-max">
               {STAGES.map((stage) => {
                 const leads = board[stage.id] || []
                 return (
-                  <div key={stage.id} className="w-64 flex flex-col">
+                  <div key={stage.id} className="flex flex-col shrink-0" style={{ minWidth: '280px', maxWidth: '300px' }}>
                     <div
                       className="flex items-center justify-between px-3 py-2 rounded-t-lg"
                       style={{
@@ -255,6 +255,8 @@ export default function Pipeline() {
                             border: `1px solid ${stage.borderColor}`,
                             borderTop: 'none',
                             background: snapshot.isDraggingOver ? 'rgba(0,200,232,0.06)' : '#0A1E30',
+                            overflowY: 'auto',
+                            paddingBottom: '16px',
                           }}
                         >
                           {leads.map((lead, index) => (
