@@ -81,9 +81,16 @@ export default function MarketIntelligence() {
           setLeadCounts({ hot, warm, cold })
           const nicheMap: Record<string, number> = {}
           leads.forEach(l => { const k = l.niche?.toLowerCase() ?? 'outro'; nicheMap[k] = (nicheMap[k] ?? 0) + 1 })
+          const NICHE_COLOR_MAP: Record<string, string> = {
+            alimentacao: '#fb923c', alimentação: '#fb923c', restaurante: '#fb923c',
+            pet: '#fbbf24', petshop: '#fbbf24',
+            automotivo: '#a78bfa', oficina: '#a78bfa',
+            beleza: '#f472b6', salao: '#f472b6', salão: '#f472b6',
+            saude: '#60a5fa', saúde: '#60a5fa', clinica: '#60a5fa', clínica: '#60a5fa',
+            estetica: '#34d399', estética: '#34d399', academia: '#34d399',
+          }
           const niched = Object.entries(nicheMap).sort((a, b) => b[1] - a[1]).slice(0, 6).map(([key, val]) => {
-            const seg = SEGMENTOS.find(s => key.includes(s.key.split('_')[0]))
-            return { name: seg?.label ?? key, value: val, color: seg?.color ?? '#94a3b8' }
+            return { name: key, value: val, color: NICHE_COLOR_MAP[key.toLowerCase()] ?? '#94a3b8' }
           })
           setLeadsByNiche(niched)
         }
