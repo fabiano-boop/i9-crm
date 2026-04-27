@@ -69,7 +69,7 @@ export default function MarketIntelligence() {
       setLoading(true)
       try {
         const [overviewRes, projRes, leadsRes] = await Promise.allSettled([
-          clientsApi.overview(), clientsApi.mrrProjection(), leadsApi.list({ limit: 500 }),
+          clientsApi.overview(), clientsApi.mrrProjection(), leadsApi.list({ limit: 5000 }),
         ])
         if (overviewRes.status === 'fulfilled') setOverview(overviewRes.value.data)
         if (projRes.status === 'fulfilled')     setProjection(projRes.value.data)
