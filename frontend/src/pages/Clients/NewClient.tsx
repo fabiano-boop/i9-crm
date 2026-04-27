@@ -211,7 +211,7 @@ export default function NewClient() {
               {error && <div className="rounded-lg px-4 py-3 text-sm" style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', color: '#f87171' }}>{error}</div>}
               <div className="flex justify-between pt-2">
                 <button type="button" onClick={() => setActiveTab('contact')} className="text-sm px-4 py-2" style={{ color: '#7EAFC4' }}>← Voltar</button>
-                <button type="submit" disabled={saving} className="px-6 py-2 rounded-lg text-sm flex items-center gap-2 disabled:opacity-60" style={btnPrimary}>
+                <button type="button" disabled={saving} onClick={handleSubmit(onSubmit)} className="px-6 py-2 rounded-lg text-sm flex items-center gap-2 disabled:opacity-60" style={btnPrimary}>
                   {saving ? <><span className="w-4 h-4 rounded-full animate-spin" style={{ border: '2px solid rgba(6,20,34,0.3)', borderTop: '2px solid #061422' }} />Salvando...</> : '✓ Cadastrar cliente'}
                 </button>
               </div>
