@@ -75,7 +75,7 @@ export default function Pipeline() {
     async function load() {
       setLoading(true)
       try {
-        const { data } = await leadsApi.list({ limit: 200 })
+        const { data } = await leadsApi.list({ limit: 9999 })
         const grouped: Board = {}
         STAGES.forEach((s) => { grouped[s.id] = [] })
         data.data.forEach((lead) => {
