@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -64,14 +64,15 @@ const inputErrStyle: React.CSSProperties = { ...inputStyle, border: '1px solid r
 function Label({ children }: { children: React.ReactNode }) {
   return <label className="block text-xs uppercase tracking-widest mb-2" style={{ color: '#7EAFC4', fontFamily: 'monospace' }}>{children}</label>
 }
-function Input({ error, ...props }: React.InputHTMLAttributes<HTMLInputElement> & { error?: string }) {
-  return (
+const Input = React.forwardRef<HTMLInputElement, React.InputHTMLAttributes<HTMLInputElement> & { error?: string }>(
+  ({ error, ...props }, ref) => (
     <div>
-      <input {...props} style={error ? inputErrStyle : inputStyle} />
+      <input ref={ref} {...props} style={error ? inputErrStyle : inputStyle} />
       {error && <p className="text-xs mt-1" style={{ color: '#f87171' }}>{error}</p>}
     </div>
   )
-}
+)
+Input.displayName = 'Input'
 function Select({ error, children, ...props }: React.SelectHTMLAttributes<HTMLSelectElement> & { error?: string }) {
   return (
     <div>
