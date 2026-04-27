@@ -101,10 +101,7 @@ export default function NewClient() {
   const watchPackage = watch('package')
   const watchOrigin  = watch('origin')
 
-  console.log('ERROS ZOD:', errors)
-
   async function onSubmit(values: FormValues) {
-    console.log('SUBMIT CHAMADO - valores:', JSON.stringify(values))
     setSaving(true); setError('')
     try {
       const payload: CreateClientInput = {
@@ -121,7 +118,6 @@ export default function NewClient() {
       if (values.leadId) await leadsApi.update(values.leadId, { status: 'CLOSED' }).catch(() => null)
       navigate(`/clients/${client.id}`)
     } catch (err: unknown) {
-      console.error('ERRO:', err)
       const msg = (err as { response?: { data?: { error?: string } } })?.response?.data?.error
       setError(msg ?? 'Erro ao salvar cliente')
     } finally { setSaving(false) }
