@@ -87,7 +87,16 @@ export default function NewClient() {
   const [saving, setSaving] = useState(false)
   const [error, setError]   = useState('')
 
-  const { register, handleSubmit, watch, formState: { errors } } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    shouldUnregister: false,
+    defaultValues: {
+      businessName: '',
+      ownerName: '',
+      whatsapp: '',
+      origin: 'manual',
+    }
+  })
   const watchPackage = watch('package')
   const watchOrigin  = watch('origin')
 
