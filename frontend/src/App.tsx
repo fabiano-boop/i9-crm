@@ -64,6 +64,7 @@ export default function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/leads" element={<Leads />} />
           <Route path="/leads/duplicates" element={<Duplicates />} />
+          <Route path="/leads/:id" element={<Leads />} />
           <Route path="/pipeline" element={<Pipeline />} />
           <Route path="/campaigns" element={<Campaigns />} />
           <Route path="/analytics" element={<Analytics />} />

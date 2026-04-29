@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { leadsApi, campaignsApi, alertsApi, analyticsApi, settingsApi, type Lead, type Campaign, type OpportunityAlert, type FinancialAnalytics, type DashboardComparison, type SmartAlert } from '../services/api'
 import ScoreBadge from '../components/shared/ScoreBadge'
 import MetricDelta from '../components/shared/MetricDelta'
@@ -10,6 +11,15 @@ const STAGE_LABELS: Record<string, string> = {
 const STAGE_ORDER = ['new', 'contacted', 'replied', 'proposal', 'negotiation', 'closed', 'lost']
 
 export default function Dashboard() {
+  const navigate = useNavigate()
+
+  // Fallback de navegação por tipo de alerta (caso actionUrl venha nulo do backend)
+  const ALERT_FALLBACK: Record<string, string> = {
+    HOT_LEAD_IDLE:    '/leads?classification=HOT',
+    DEAL_STALLED:     '/pipeline',
+    OVERDUE_INVOICE:  '/clients',
+  }
+
   const [hotLeads, setHotLeads]       = useState<Lead[]>([])
   const [campaigns, setCampaigns]     = useState<Campaign[]>([])
   const [topAlerts, setTopAlerts]     = useState<OpportunityAlert[]>([])
@@ -131,13 +141,13 @@ export default function Dashboard() {
                   >
                     {alert.severity === 'high' ? 'Alta' : 'Média'}
                   </span>
-                  <a
-                    href={alert.actionUrl}
-                    className="text-xs font-semibold shrink-0 px-3 py-1 rounded-lg transition-colors"
-                    style={{ background: 'rgba(0,200,232,0.1)', color: '#00C8E8' }}
+                  <button
+                    onClick={() => navigate(alert.actionUrl || ALERT_FALLBACK[alert.type] || '/leads')}
+                    className="text-xs font-semibold shrink-0 px-3 py-1 rounded-lg transition-colors cursor-pointer"
+                    style={{ background: 'rgba(0,200,232,0.1)', color: '#00C8E8', border: 'none' }}
                   >
                     Ver →
-                  </a>
+                  </button>
                 </div>
               )
             })}
