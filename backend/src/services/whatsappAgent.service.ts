@@ -82,14 +82,33 @@ const handoffQueue  = new Map<string, {
   phone?: string | null
 }>()
 
+// Leads sob controle humano — Maya não interfere mesmo recebendo mensagens
+// Carregado do banco na inicialização para sobreviver a restarts do servidor
+const humanModeLeads = new Set<string>()
+
+// Carrega do banco os leads em humanMode ao iniciar o servidor
+prisma.lead.findMany({ where: { humanMode: true }, select: { id: true } })
+  .then((leads) => {
+    leads.forEach((l) => humanModeLeads.add(l.id))
+    if (leads.length > 0) logger.info({ count: leads.length }, 'Agente: humanMode carregado do banco')
+  })
+  .catch((err) => logger.warn({ err }, 'Agente: erro ao carregar humanMode do banco'))
+
 export function getAgentSessions(): Map<string, ConversationStage> { return agentSessions }
 export function getHandoffQueue() { return handoffQueue }
 export function isAgentManaged(leadId: string): boolean { return agentSessions.has(leadId) }
+export function isHumanMode(leadId: string): boolean { return humanModeLeads.has(leadId) }
 
 export function takeoverFromAgent(leadId: string): void {
   agentSessions.delete(leadId)
   handoffQueue.delete(leadId)
-  logger.info({ leadId }, 'Agente: humano assumiu conversa')
+  humanModeLeads.add(leadId)
+  // Persiste no banco para sobreviver a restarts
+  prisma.lead.update({
+    where: { id: leadId },
+    data: { humanMode: true, humanModeAt: new Date() },
+  }).catch((err) => logger.warn({ err, leadId }, 'Agente: erro ao persistir humanMode'))
+  logger.info({ leadId }, 'Agente: humano assumiu conversa — Maya bloqueada')
 }
 
 // ─── Packages ─────────────────────────────────────────────────────────────────
@@ -213,6 +232,11 @@ export async function processMessage(
 ): Promise<AgentResponse> {
   if (!_agentEnabled) {
     throw new Error('Agente Maya está desativado')
+  }
+
+  // Bloqueia leads que foram assumidos por humano
+  if (humanModeLeads.has(leadId)) {
+    throw new Error('Conversa sob controle humano — Maya não intervém')
   }
 
   // 1. Carregar lead + histórico

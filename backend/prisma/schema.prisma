@@ -73,6 +73,8 @@ model Lead {
   nextFollowUpAt      DateTime?
   recommendedPackage  String?    // basico | pro | premium — enriched from marketIntelligence
   conversionPotential Int?       // 0-100 — segment conversion potential from marketIntelligence
+  humanMode           Boolean    @default(false)  // true = Maya bloqueada, humano assumiu
+  humanModeAt         DateTime?                   // quando o humano assumiu
   importedAt          DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
   assignedTo      User?          @relation(fields: [assignedToId], references: [id])
