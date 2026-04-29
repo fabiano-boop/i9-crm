@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { clientsApi, leadsApi } from "../services/api";
 import {
   AreaChart,
   Area,
@@ -163,32 +164,30 @@ export default function MarketIntelligence() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const token = localStorage.getItem("token");
-        const headers = { Authorization: `Bearer ${token}` };
 
         const [clientsRes, leadsRes] = await Promise.all([
-          fetch("/api/clients", { headers }),
-          fetch("/api/leads", { headers }),
+          clientsApi.list({ limit: 100 }),
+          leadsApi.list({ limit: 100 }),
         ]);
 
-        const clients = clientsRes.ok ? await clientsRes.json() : [];
-        const leads = leadsRes.ok ? await leadsRes.json() : [];
+        // clientsApi retorna { clients: Client[], total, page, limit }
+        const clientList = clientsRes.data.clients ?? [];
+        // leadsApi retorna PaginatedResult<Lead> com { data: Lead[], meta: {...} }
+        const leadList = (leadsRes.data as any).data ?? (leadsRes.data as any).leads ?? [];
 
-        const clientList = Array.isArray(clients?.clients) ? clients.clients : Array.isArray(clients) ? clients : [];
-        const leadList = Array.isArray(leads?.leads) ? leads.leads : Array.isArray(leads) ? leads : [];
-
-        // Calcular MRR real baseado nos planos dos clientes
-        const tierMap: Record<string, "basic" | "pro" | "premium"> = {};
+        // Mapear packages reais: start → básico, growth → pro, premium → premium
         let basic = 0, pro = 0, premium = 0;
-
-        clientList.forEach((c: any) => {
-          const plan = (c.plan || c.tier || c.package || "").toLowerCase();
-          if (plan.includes("premium") || plan.includes("premium")) premium++;
-          else if (plan.includes("pro")) pro++;
-          else basic++;
+        clientList.forEach((c) => {
+          const pkg = (c.package ?? "").toLowerCase();
+          if (pkg === "premium")     premium++;
+          else if (pkg === "growth") pro++;
+          else                       basic++; // start ou sem pacote
         });
 
-        const mrrCalc = basic * TIER_PRICES.basic + pro * TIER_PRICES.pro + premium * TIER_PRICES.premium;
+        // MRR usando valor real do cliente, não preços fixos
+        const mrrCalc = clientList.reduce(
+          (sum, c) => sum + (Number(c.monthlyValue) || 0), 0
+        );
 
         setStats({
           totalClients: clientList.length,
@@ -204,8 +203,8 @@ export default function MarketIntelligence() {
           setSimPro(Math.max(pro, 1));
           setSimPremium(Math.max(premium, 0));
         }
-      } catch {
-        // Fallback com valores demo
+      } catch (err) {
+        console.error("[MarketIntelligence] fetchStats error:", err);
         setStats({
           totalClients: 0,
           clientsByTier: { basic: 0, pro: 0, premium: 0 },
