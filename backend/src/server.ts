@@ -12,6 +12,7 @@ import apiRouter from './routes/index.js'
 import { startAllWorkers, scheduleAllJobs } from './jobs/index.js'
 import { initWebSocket } from './services/websocket.service.js'
 import { startDailyLeadScraperJob } from './jobs/dailyLeadScraper.job.js'
+import { followUpService } from './services/followUp.service.js'
 
 const app = express()
 app.set('trust proxy', 1)
@@ -123,6 +124,13 @@ httpServer.listen(PORT, () => {
     logger.info('Scraper diário de leads iniciado com sucesso')
   } catch (err) {
     logger.error({ err }, 'Falha ao iniciar scraper de leads')
+  }
+
+  // Follow-up automático de leads (node-cron — sem Redis)
+  try {
+    followUpService.start()
+  } catch (err) {
+    logger.error({ err }, 'Falha ao iniciar serviço de follow-up')
   }
 })
 
