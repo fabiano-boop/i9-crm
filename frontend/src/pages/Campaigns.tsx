@@ -435,6 +435,25 @@ export default function Campaigns() {
                   <p className="text-xs mt-0.5" style={{ color: '#7EAFC4' }}>
                     {c._count?.campaignLeads ?? 0} leads · Criada por {c.createdBy?.name} · {new Date(c.createdAt).toLocaleDateString('pt-BR')}
                   </p>
+                  {c.scoreCounts && (c.scoreCounts.hot + c.scoreCounts.warm + c.scoreCounts.cold) > 0 && (
+                    <div className="flex items-center gap-1.5 mt-1">
+                      {c.scoreCounts.hot > 0 && (
+                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: 'rgba(248,113,113,0.15)', color: '#f87171', border: '1px solid rgba(248,113,113,0.3)' }}>
+                          🔥 {c.scoreCounts.hot} HOT
+                        </span>
+                      )}
+                      {c.scoreCounts.warm > 0 && (
+                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: 'rgba(251,191,36,0.12)', color: '#fbbf24', border: '1px solid rgba(251,191,36,0.3)' }}>
+                          ⚡ {c.scoreCounts.warm} WARM
+                        </span>
+                      )}
+                      {c.scoreCounts.cold > 0 && (
+                        <span className="text-xs font-semibold px-1.5 py-0.5 rounded" style={{ background: 'rgba(96,165,250,0.1)', color: '#60a5fa', border: '1px solid rgba(96,165,250,0.25)' }}>
+                          ❄️ {c.scoreCounts.cold} COLD
+                        </span>
+                      )}
+                    </div>
+                  )}
                   {c.bodyText && <p className="text-sm mt-1 line-clamp-1" style={{ color: '#5A9AB5' }}>{c.bodyText.slice(0, 100)}...</p>}
                 </div>
                 <div className="flex gap-2 shrink-0">

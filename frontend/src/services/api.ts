@@ -239,6 +239,7 @@ export interface Campaign {
   updatedAt: string
   createdBy?: { id: string; name: string }
   _count?: { campaignLeads: number }
+  scoreCounts?: { hot: number; warm: number; cold: number }
 }
 
 export interface AuditLog {

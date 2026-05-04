@@ -19,7 +19,7 @@ const campaignSchema = z.object({
 // GET /api/campaigns
 export async function listCampaigns(req: Request, res: Response): Promise<void> {
   const { page, limit } = getPaginationParams(req.query as Record<string, unknown>)
-  const [data, total] = await Promise.all([
+  const [data, total, rawScores] = await Promise.all([
     prisma.campaign.findMany({
       skip: (page - 1) * limit,
       take: limit,
@@ -30,8 +30,26 @@ export async function listCampaigns(req: Request, res: Response): Promise<void> 
       },
     }),
     prisma.campaign.count(),
+    prisma.$queryRaw<{ campaignId: string; hot: bigint; warm: bigint; cold: bigint }[]>`
+      SELECT
+        cl."campaignId",
+        COUNT(CASE WHEN l.score >= 80 THEN 1 END) AS hot,
+        COUNT(CASE WHEN l.score >= 60 AND l.score < 80 THEN 1 END) AS warm,
+        COUNT(CASE WHEN l.score < 60 THEN 1 END) AS cold
+      FROM "CampaignLead" cl
+      JOIN "Lead" l ON l.id = cl."leadId"
+      GROUP BY cl."campaignId"
+    `,
   ])
-  res.json(buildPaginatedResult(data, total, { page, limit }))
+
+  const scoreMap = new Map(rawScores.map((r) => [r.campaignId, {
+    hot: Number(r.hot),
+    warm: Number(r.warm),
+    cold: Number(r.cold),
+  }]))
+
+  const enriched = data.map((c) => ({ ...c, scoreCounts: scoreMap.get(c.id) ?? { hot: 0, warm: 0, cold: 0 } }))
+  res.json(buildPaginatedResult(enriched, total, { page, limit }))
 }
 
 // GET /api/campaigns/:id
