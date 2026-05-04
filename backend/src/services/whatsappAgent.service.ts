@@ -183,6 +183,31 @@ SINALIZAR stage=human_needed QUANDO:
 - Lead demonstrou raiva ou frustração clara
 - Lead pediu para não ser contatado mais`
 
+// ─── Regras de segmentação por nicho ─────────────────────────────────────────
+
+const SEGMENT_RULES: Record<string, string> = {
+  clinica: `REGRA OBRIGATÓRIA — CLÍNICAS E SAÚDE:
+Nunca mencione avaliações Google, reviews negativos ou presença digital fraca na abertura.
+Foque exclusivamente em RESULTADO: agenda cheia, pacientes inativos, sazonalidade.
+Abertura ideal: "Trabalho com clínicas na Zona Leste e tenho uma estratégia que preenche agenda nos meses fracos. Posso contar como funciona?"
+Profissionais de saúde são altamente sensíveis à reputação — nunca diagnostique, gere curiosidade.`,
+
+  salao: `REGRA OBRIGATÓRIA — SALÕES E ESTÉTICA:
+Foco em: fidelização de clientes, agenda vazia nas terças/quartas, concorrência de salões novos.
+Abertura ideal: "Trabalho com salões aqui na Zona Leste. Tenho uma estratégia que traz clientes inativos de volta. Vale um papo rápido?"`,
+
+  academia: `REGRA OBRIGATÓRIA — ACADEMIAS E FITNESS:
+Foco em: evasão de alunos em março/abril, renovação de contratos, captação de novos alunos.
+Abertura ideal: "Trabalho com academias na Zona Leste. Tenho um método que reduz evasão e aumenta renovações. Posso te contar?"`,
+
+  restaurante: `REGRA OBRIGATÓRIA — RESTAURANTES E ALIMENTAÇÃO:
+Foco em: delivery, mesa vazia no meio da semana, ticket médio baixo.
+Abertura ideal: "Trabalho com restaurantes na Zona Leste. Tenho uma estratégia que aumenta pedidos nos dias fracos. Posso mostrar como?"`,
+
+  default: `Foque na principal dor do segmento. Nunca aponte fraquezas do negócio diretamente.
+Gere curiosidade com resultado, não diagnóstico não solicitado.`,
+}
+
 // ─── Claude client ────────────────────────────────────────────────────────────
 
 function getClient(): Anthropic {
@@ -289,11 +314,14 @@ Analise tudo e retorne APENAS um JSON válido:
 }`
 
   // 4. Chamar Claude
+  const segmentRule = SEGMENT_RULES[lead.niche?.toLowerCase() ?? ''] ?? SEGMENT_RULES.default
+  const systemWithSegment = `${MAYA_SYSTEM}\n\n${segmentRule}`
+
   const client = getClient()
   const claudeResponse = await client.messages.create({
     model: 'claude-sonnet-4-6',
     max_tokens: 600,
-    system: MAYA_SYSTEM,
+    system: systemWithSegment,
     messages: [...history, { role: 'user', content: contextPrompt }],
   })
 
