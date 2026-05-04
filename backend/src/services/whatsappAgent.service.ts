@@ -491,7 +491,16 @@ Analise tudo e retorne APENAS um JSON válido:
 }`
 
   // 4. Chamar Claude
-  const segment = (lead.niche ?? '').toLowerCase()
+  const NICHE_MAP: Record<string, string> = {
+    'saúde': 'clinica', 'saude': 'clinica', 'clínica': 'clinica', 'clinica': 'clinica',
+    'alimentação': 'restaurante', 'alimentacao': 'restaurante', 'restaurante': 'restaurante',
+    'automotivo': 'oficina', 'oficina': 'oficina',
+    'fitness': 'academia', 'academia': 'academia',
+    'pet': 'petshop', 'petshop': 'petshop', 'pet shop': 'petshop',
+    'estética': 'salao', 'estetica': 'salao', 'salão': 'salao', 'salao': 'salao',
+  }
+  const nicheKey = (lead.niche ?? '').toLowerCase()
+  const segment = NICHE_MAP[nicheKey] ?? nicheKey
   const segmentRule = SEGMENT_RULES[segment] ?? SEGMENT_RULES.default
   const systemWithSegment = `${MAYA_SYSTEM}\n\n${segmentRule}`
 
