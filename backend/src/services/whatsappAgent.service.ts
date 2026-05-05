@@ -402,7 +402,7 @@ function buildHistory(interactions: Interaction[]): Anthropic.Messages.MessagePa
     }))
 }
 
-// ─── Send via Evolution API (inline — evita import circular) ──────────────────
+// ─── Send via Whapi (inline — evita import circular) ──────────────────────────
 
 async function sendWhatsAppReply(phone: string, message: string): Promise<boolean> {
   const digits = phone.replace(/\D/g, '')

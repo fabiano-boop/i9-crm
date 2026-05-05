@@ -7,15 +7,15 @@ const router = Router()
 /**
  * POST /api/webhooks/whatsapp
  *
- * Recebe eventos da Evolution API (delivery status + mensagens recebidas).
- * Configure no painel da Evolution API:
+ * Recebe eventos da Whapi (delivery status + mensagens recebidas).
+ * Configure no painel da Whapi:
  *   URL: https://seu-backend.com/api/webhooks/whatsapp
- *   Eventos: messages.upsert, messages.update
+ *   Eventos: messages, statuses
  *
- * Rota pública (sem JWT) — autenticada pelo EVOLUTION_API_KEY no header se configurado.
+ * Rota pública (sem JWT).
  */
 router.post('/whatsapp', async (req: Request, res: Response): Promise<void> => {
-  // Responde 200 imediatamente para a Evolution API não reenviar
+  // Responde 200 imediatamente para a Whapi não reenviar
   res.status(200).json({ received: true })
 
   // Processa de forma assíncrona sem bloquear a resposta

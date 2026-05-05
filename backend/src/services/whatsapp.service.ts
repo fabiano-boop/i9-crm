@@ -24,6 +24,7 @@ function humanDelay(): Promise<void> {
 
 // Limite diário pelo dia de warm-up:
 // Dia 1-7: 20 | Dia 8-30: 50 | Dia 31-90: 80 | Dia 91+: 150
+// Hard cap de 30 msgs/dia para proteger o número durante warm-up no Whapi
 function getDailyLimit(warmupDay: number): number {
   if (warmupDay <= 7) return 20
   if (warmupDay <= 30) return 50
@@ -41,7 +42,8 @@ async function getAntiBanStatus(): Promise<{ sentToday: number; limit: number; w
   ])
 
   const warmupDay = Math.max(1, Math.floor((Date.now() - config.warmupStartDate.getTime()) / 86_400_000) + 1)
-  return { sentToday: stats?.sent ?? 0, limit: getDailyLimit(warmupDay), warmupDay }
+  // Math.min(30, ...) — hard cap de 30/dia enquanto o número ainda está em warm-up no Whapi
+  return { sentToday: stats?.sent ?? 0, limit: Math.min(30, getDailyLimit(warmupDay)), warmupDay }
 }
 
 async function incrementDailyCounter(): Promise<void> {
@@ -266,4 +268,9 @@ export async function processWhatsAppWebhook(body: Record<string, unknown>): Pro
       )
     }
   }
+}
+
+// Wrapper para uso no whatsappAgent.service.ts
+export async function sendWhatsAppReply(to: string, body: string): Promise<void> {
+  await sendText(to, body)
 }
