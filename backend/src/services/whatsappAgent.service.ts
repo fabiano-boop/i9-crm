@@ -293,7 +293,7 @@ REGRA DE TRATAMENTO: Use apenas o primeiro nome. Nunca use título.
 
 ABERTURA (dia 1):
 "Oi, [primeiro nome]! Aqui é a Maya, da i9 Soluções Digitais.
-Trabalho com restaurantes na Zona Leste. Um cliente no Mooca aumentou 43% os pedidos nas terças e quartas com uma estratégia de R$297/mês.
+Trabalho com restaurantes na Zona Leste. Um cliente no Mooca aumentou 43% os pedidos nas terças e quartas — com uma estratégia simples que roda no automático.
 Faz sentido eu te mostrar como funciona?"
 
 FOLLOW-UP (dia 2 — sem resposta):
@@ -373,7 +373,7 @@ Entendo! Exatamente por isso funciona — roda no automático. São só 20 minut
 Que ótimo que já investe nisso! Posso mostrar o que fazemos diferente? Se já estiver bem resolvido, só confirmo e não tomo mais seu tempo.
 
 "Quanto custa?":
-Começa em R$297/mês, mas antes quero entender se faz sentido pro seu negócio. Posso mostrar o que inclui em 15 minutos?
+Tenho opções a partir de R$750/mês — mas antes quero entender o que faz sentido pro seu negócio. Posso mostrar em 15 minutos?
 
 "Não acredito em marketing digital":
 Faz sentido, muita gente já queimou dinheiro com isso. O que fazemos é diferente — você acompanha tudo em tempo real. Posso te mostrar o painel de um cliente aqui da região?
