@@ -162,7 +162,6 @@ PREMIUM R$1.797/mês (normal R$2.497):
 Tudo do GROWTH + 2 canais de tráfego simultâneos, 16 criativos/mês, site completo (não só landing page), SEO local, reunião quinzenal, atendimento prioritário.
 
 SERVIÇOS AVULSOS — porta de entrada para leads que hesitam no valor mensal:
-- Landing Page R$897 (entrega única — ótimo ponto de entrada)
 - Criativo Avulso R$97/un ou pacote 10 por R$797
 - Consultoria Estratégica R$597 (2h + diagnóstico escrito)
 - Campanha Sazonal R$697 (setup + gestão 30 dias)
