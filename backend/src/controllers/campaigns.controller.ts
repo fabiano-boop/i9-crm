@@ -3,7 +3,7 @@ import { z } from 'zod'
 import { prisma } from '../config/database.js'
 import { getPaginationParams, buildPaginatedResult } from '../utils/pagination.js'
 import { logger } from '../utils/logger.js'
-import { sendCampaignWhatsApp } from '../services/whatsapp.service.js'
+import { sendCampaignWABA } from '../services/whatsapp.service.js'
 import { autoCreateCampaignsByNiche } from '../services/nicheAutoCampaign.service.js'
 
 const campaignSchema = z.object({
@@ -193,7 +193,7 @@ export async function sendCampaign(req: Request, res: Response): Promise<void> {
   // se o processo reiniciar, o disparo para. Leads já enviados (status=SENT) não
   // são reenviados pois sendCampaignWhatsApp filtra apenas status=PENDING.
   if (campaign.type === 'WHATSAPP' || campaign.type === 'BOTH') {
-    sendCampaignWhatsApp(campaign.id).catch((err) =>
+    sendCampaignWABA(campaign.id).catch((err) =>
       logger.error({ err, campaignId: campaign.id }, 'Erro no disparo da campanha WhatsApp')
     )
   }

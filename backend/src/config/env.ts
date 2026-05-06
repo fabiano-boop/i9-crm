@@ -34,6 +34,10 @@ const envSchema = z.object({
   GA4_CLIENT_SECRET: z.string().optional(),
   GA4_REDIRECT_URI: z.string().optional(),
   SEARCH_CONSOLE_REDIRECT_URI: z.string().optional(),
+  META_WABA_TOKEN: z.string().default(''),
+  META_PHONE_NUMBER_ID: z.string().default(''),
+  META_WABA_ID: z.string().default(''),
+  META_WEBHOOK_VERIFY_TOKEN: z.string().default('i9crm-meta-webhook-2026'),
 })
 
 const parsed = envSchema.safeParse(process.env)
