@@ -8,7 +8,7 @@ import * as ga4 from '../services/ga4.service.js'
 
 const router = Router()
 
-// ─── GA4 OAuth2 callback (sem JWT — Google redireciona aqui diretamente) ──────
+// ─── GA4 OAuth2 callback — per-client (sem JWT) ───────────────────────────────
 router.get('/ga4/callback', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const code    = req.query['code']  as string | undefined
   const state   = req.query['state'] as string | undefined
@@ -27,6 +27,27 @@ router.get('/ga4/callback', asyncHandler(async (req: Request, res: Response): Pr
   } catch (err) {
     logger.error({ err, state }, 'GA4 callback: falha ao trocar código por tokens')
     res.redirect(`${frontendUrl}/clients/${state}?ga4=error`)
+  }
+}))
+
+// ─── GA4 OAuth2 callback — agência (sem JWT) ──────────────────────────────────
+router.get('/ga4/agency-callback', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const code  = req.query['code']  as string | undefined
+  const error = req.query['error'] as string | undefined
+  const frontendUrl = env.FRONTEND_URL.split(',')[0].trim()
+
+  if (error || !code) {
+    logger.warn({ error }, 'GA4 agency callback: erro ou code ausente')
+    res.redirect(`${frontendUrl}/settings?ga4_agency=error`)
+    return
+  }
+
+  try {
+    await ga4.handleAgencyCallback(code)
+    res.redirect(`${frontendUrl}/settings?ga4_agency=connected`)
+  } catch (err) {
+    logger.error({ err }, 'GA4 agency callback: falha ao salvar tokens')
+    res.redirect(`${frontendUrl}/settings?ga4_agency=error`)
   }
 }))
 
@@ -78,6 +99,26 @@ router.get('/search-console/metrics/:clientId', asyncHandler(async (req: Request
 router.delete('/ga4/:clientId', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const clientId = req.params['clientId'] as string
   await ga4.disconnect(clientId)
+  res.json({ ok: true })
+}))
+
+// ─── Rotas de Agência ─────────────────────────────────────────────────────────
+
+// GET /api/integrations/ga4/agency-auth → { authUrl }
+router.get('/ga4/agency-auth', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const authUrl = ga4.getAgencyAuthUrl()
+  res.json({ authUrl })
+}))
+
+// GET /api/integrations/ga4/agency-metrics → AgencyGa4Metrics
+router.get('/ga4/agency-metrics', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  const metrics = await ga4.getAgencyMetrics()
+  res.json(metrics)
+}))
+
+// DELETE /api/integrations/ga4/agency → desconectar agência
+router.delete('/ga4/agency', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
+  await ga4.disconnectAgency()
   res.json({ ok: true })
 }))
 

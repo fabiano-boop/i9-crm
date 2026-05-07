@@ -4,6 +4,7 @@ import { leadsApi, campaignsApi, alertsApi, analyticsApi, settingsApi, type Lead
 import ScoreBadge from '../components/shared/ScoreBadge'
 import MetricDelta from '../components/shared/MetricDelta'
 import MetaAdsMetrics from '../components/MetaAdsMetrics'
+import GA4AgencyMetrics from '../components/GA4AgencyMetrics'
 
 const STAGE_LABELS: Record<string, string> = {
   new: 'Novo', contacted: 'Contatado', replied: 'Respondeu',
@@ -417,6 +418,9 @@ export default function Dashboard() {
           )}
         </div>
       )}
+
+      {/* GA4 — Métricas do site i9 */}
+      <GA4AgencyMetrics />
 
       {/* Meta Ads — Métricas de Campanhas */}
       <MetaAdsMetrics />

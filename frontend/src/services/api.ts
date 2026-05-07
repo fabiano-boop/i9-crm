@@ -606,6 +606,24 @@ export interface SearchConsoleMetrics {
   impressions: number; clicks: number; ctr: number; position: number
 }
 
+// GA4 da agência (property própria i9)
+export interface AgencyGa4Channel {
+  channel: string
+  sessions: number
+  users: number
+  percent: number
+}
+export interface AgencyGa4Metrics {
+  sessions: number
+  users: number
+  newUsers: number
+  bounceRate: number
+  engagementRate: number
+  channels: AgencyGa4Channel[]
+  period: { startDate: string; endDate: string }
+  generatedAt: string
+}
+
 export const integrationsApi = {
   ga4AuthUrl:      (clientId: string) => api.get<{ authUrl: string }>(`/integrations/ga4/auth/${clientId}`),
   ga4SaveProperty: (clientId: string, propertyId: string, searchConsoleUrl?: string) =>
@@ -613,6 +631,10 @@ export const integrationsApi = {
   ga4Metrics:      (clientId: string) => api.get<Ga4Metrics>(`/integrations/ga4/metrics/${clientId}`),
   scMetrics:       (clientId: string) => api.get<SearchConsoleMetrics>(`/integrations/search-console/metrics/${clientId}`),
   ga4Disconnect:   (clientId: string) => api.delete<{ ok: boolean }>(`/integrations/ga4/${clientId}`),
+  // Agência
+  ga4AgencyMetrics: () => api.get<AgencyGa4Metrics>('/integrations/ga4/agency-metrics'),
+  ga4AgencyAuthUrl: () => api.get<{ authUrl: string }>('/integrations/ga4/agency-auth'),
+  ga4AgencyDisconnect: () => api.delete<{ ok: boolean }>('/integrations/ga4/agency'),
 }
 
 // ===== CLIENTS =====

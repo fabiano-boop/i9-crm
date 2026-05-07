@@ -214,3 +214,151 @@ export async function disconnect(clientId: string): Promise<void> {
   })
   logger.info({ clientId }, 'GA4: desconectado')
 }
+
+// ─── GA4 da Agência (property própria, não por cliente) ───────────────────────
+
+export interface AgencyGa4Metrics {
+  sessions: number
+  users: number
+  newUsers: number
+  bounceRate: number
+  engagementRate: number
+  channels: { channel: string; sessions: number; users: number; percent: number }[]
+  period: { startDate: string; endDate: string }
+  generatedAt: string
+}
+
+function makeAgencyOAuth2() {
+  return makeOAuth2(env.GA4_AGENCY_REDIRECT_URI ?? env.GA4_REDIRECT_URI)
+}
+
+export function getAgencyAuthUrl(): string {
+  if (!env.GA4_CLIENT_ID || !env.GA4_CLIENT_SECRET) {
+    throw new Error('GA4_CLIENT_ID e GA4_CLIENT_SECRET não configurados no .env')
+  }
+  const oauth2 = makeAgencyOAuth2()
+  return oauth2.generateAuthUrl({
+    access_type: 'offline',
+    prompt: 'consent',
+    scope: ['https://www.googleapis.com/auth/analytics.readonly'],
+    state: 'agency',
+  })
+}
+
+export async function handleAgencyCallback(code: string): Promise<void> {
+  const oauth2 = makeAgencyOAuth2()
+  const { tokens } = await oauth2.getToken(code)
+
+  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } })
+  if (!admin) throw new Error('Usuário admin não encontrado')
+
+  await prisma.user.update({
+    where: { id: admin.id },
+    data: {
+      ga4AgencyAccessToken:  tokens.access_token  ? encryptToken(tokens.access_token)  : undefined,
+      ga4AgencyRefreshToken: tokens.refresh_token ? encryptToken(tokens.refresh_token) : undefined,
+      ga4AgencyTokenExpires: tokens.expiry_date   ? new Date(tokens.expiry_date)       : undefined,
+    },
+  })
+  logger.info('GA4: tokens de agência salvos com sucesso')
+}
+
+export async function getAgencyMetrics(): Promise<AgencyGa4Metrics> {
+  const propertyId = env.GA4_AGENCY_PROPERTY_ID
+  if (!propertyId) throw new Error('GA4_AGENCY_PROPERTY_ID não configurado no .env')
+
+  const admin = await prisma.user.findFirst({
+    where: { role: 'ADMIN' },
+    select: { id: true, ga4AgencyAccessToken: true, ga4AgencyRefreshToken: true, ga4AgencyTokenExpires: true },
+  })
+  if (!admin?.ga4AgencyRefreshToken) {
+    throw new Error('GA4 da agência não conectado — acesse GET /api/integrations/ga4/agency-auth')
+  }
+
+  const oauth2 = makeAgencyOAuth2()
+  oauth2.setCredentials({
+    access_token:  admin.ga4AgencyAccessToken ? decryptToken(admin.ga4AgencyAccessToken) : undefined,
+    refresh_token: decryptToken(admin.ga4AgencyRefreshToken),
+    expiry_date:   admin.ga4AgencyTokenExpires?.getTime(),
+  })
+
+  oauth2.on('tokens', (newTokens) => {
+    if (newTokens.access_token) {
+      prisma.user.update({
+        where: { id: admin.id },
+        data: {
+          ga4AgencyAccessToken:  encryptToken(newTokens.access_token),
+          ga4AgencyTokenExpires: newTokens.expiry_date ? new Date(newTokens.expiry_date) : undefined,
+        },
+      }).catch((err) => logger.warn({ err }, 'GA4: falha ao persistir token de agência renovado'))
+    }
+  })
+
+  const analyticsdata = google.analyticsdata({ version: 'v1beta', auth: oauth2 })
+
+  const end   = new Date()
+  const start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000)
+  const startDate = start.toISOString().slice(0, 10)
+  const endDate   = end.toISOString().slice(0, 10)
+
+  const [overallRes, channelRes] = await Promise.all([
+    analyticsdata.properties.runReport({
+      property: `properties/${propertyId}`,
+      requestBody: {
+        metrics: [
+          { name: 'sessions' },
+          { name: 'activeUsers' },
+          { name: 'newUsers' },
+          { name: 'bounceRate' },
+          { name: 'engagementRate' },
+        ],
+        dateRanges: [{ startDate, endDate }],
+      },
+    }),
+    analyticsdata.properties.runReport({
+      property: `properties/${propertyId}`,
+      requestBody: {
+        dimensions: [{ name: 'sessionDefaultChannelGroup' }],
+        metrics: [{ name: 'sessions' }, { name: 'activeUsers' }],
+        dateRanges: [{ startDate, endDate }],
+        orderBys: [{ metric: { metricName: 'sessions' }, desc: true }],
+      },
+    }),
+  ])
+
+  const vals        = overallRes.data.rows?.[0]?.metricValues ?? []
+  const totalSessions = parseInt(vals[0]?.value ?? '0')
+
+  const channels = (channelRes.data.rows ?? []).map((row) => {
+    const ch  = row.dimensionValues?.[0]?.value ?? 'Other'
+    const ses = parseInt(row.metricValues?.[0]?.value ?? '0')
+    const usr = parseInt(row.metricValues?.[1]?.value ?? '0')
+    return {
+      channel: ch,
+      sessions: ses,
+      users: usr,
+      percent: totalSessions > 0 ? parseFloat(((ses / totalSessions) * 100).toFixed(1)) : 0,
+    }
+  })
+
+  return {
+    sessions:       totalSessions,
+    users:          parseInt(vals[1]?.value ?? '0'),
+    newUsers:       parseInt(vals[2]?.value ?? '0'),
+    bounceRate:     parseFloat((parseFloat(vals[3]?.value ?? '0') * 100).toFixed(1)),
+    engagementRate: parseFloat((parseFloat(vals[4]?.value ?? '0') * 100).toFixed(1)),
+    channels,
+    period: { startDate, endDate },
+    generatedAt: new Date().toISOString(),
+  }
+}
+
+export async function disconnectAgency(): Promise<void> {
+  const admin = await prisma.user.findFirst({ where: { role: 'ADMIN' }, select: { id: true } })
+  if (!admin) return
+  await prisma.user.update({
+    where: { id: admin.id },
+    data: { ga4AgencyAccessToken: null, ga4AgencyRefreshToken: null, ga4AgencyTokenExpires: null },
+  })
+  logger.info('GA4: agência desconectada')
+}

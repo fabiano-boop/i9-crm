@@ -34,6 +34,9 @@ const envSchema = z.object({
   GA4_CLIENT_SECRET: z.string().optional(),
   GA4_REDIRECT_URI: z.string().optional(),
   SEARCH_CONSOLE_REDIRECT_URI: z.string().optional(),
+  // GA4 da agência (property própria, não por cliente)
+  GA4_AGENCY_PROPERTY_ID: z.string().optional(),
+  GA4_AGENCY_REDIRECT_URI: z.string().optional(),
   META_WABA_TOKEN: z.string().default(''),
   META_PHONE_NUMBER_ID: z.string().default(''),
   META_WABA_ID: z.string().default(''),

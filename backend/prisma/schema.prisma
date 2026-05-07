@@ -25,6 +25,10 @@ model User {
   role            Role             @default(AGENT)
   // SPRINT 3.4: meta mensal de MRR do usuário
   monthlyMrrGoal  Float            @default(0)
+  // GA4 da agência (integração própria, não por cliente)
+  ga4AgencyAccessToken  String?    // criptografado AES-256
+  ga4AgencyRefreshToken String?    // criptografado AES-256
+  ga4AgencyTokenExpires DateTime?
   createdAt       DateTime         @default(now())
   leads           Lead[]
   campaigns       Campaign[]
