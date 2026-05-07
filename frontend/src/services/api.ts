@@ -675,9 +675,16 @@ export interface MetaAdsTotals {
   costPerLead: number
 }
 
+export interface MetaDailyMetric {
+  date: string   // YYYY-MM-DD
+  leads: number
+  spend: number
+}
+
 export interface MetaAdsMetricsData {
   campaigns: MetaCampaignMetrics[]
   totals: MetaAdsTotals
+  daily: MetaDailyMetric[]
   datePreset: string
   generatedAt: string
 }

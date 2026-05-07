@@ -28,9 +28,16 @@ export interface MetaAdsTotals {
   costPerLead: number
 }
 
+export interface DailyMetric {
+  date: string   // YYYY-MM-DD
+  leads: number
+  spend: number
+}
+
 export interface MetaAdsMetrics {
   campaigns: CampaignMetrics[]
   totals: MetaAdsTotals
+  daily: DailyMetric[]
   datePreset: string
   generatedAt: string
 }
@@ -44,17 +51,26 @@ export async function getMetaAdsCampaignMetrics(datePreset = 'last_30d'): Promis
   }
 
   const url = `${META_GRAPH_URL}/act_${adAccountId}/insights`
+  const commonParams = { access_token: accessToken, date_preset: datePreset }
 
-  const response = await axios.get(url, {
-    params: {
-      access_token: accessToken,
-      fields: 'campaign_id,campaign_name,spend,impressions,clicks,cpc,cpm,ctr,actions,cost_per_action_type',
-      date_preset: datePreset,
-      level: 'campaign',
-    },
-  })
+  const [campaignResponse, dailyResponse] = await Promise.all([
+    axios.get(url, {
+      params: {
+        ...commonParams,
+        fields: 'campaign_id,campaign_name,spend,impressions,clicks,cpc,cpm,ctr,actions,cost_per_action_type',
+        level: 'campaign',
+      },
+    }),
+    axios.get(url, {
+      params: {
+        ...commonParams,
+        fields: 'date_start,spend,actions',
+        time_increment: 1,
+      },
+    }),
+  ])
 
-  const data: any[] = response.data?.data ?? []
+  const data: any[] = campaignResponse.data?.data ?? []
 
   const campaigns: CampaignMetrics[] = data.map((item: any) => {
     const actions: { action_type: string; value: string }[] = item.actions ?? []
@@ -98,12 +114,24 @@ export async function getMetaAdsCampaignMetrics(datePreset = 'last_30d'): Promis
     costPerLead: rawTotals.leads > 0       ? parseFloat((rawTotals.spend / rawTotals.leads).toFixed(2)) : 0,
   }
 
-  logger.info({ campaigns: campaigns.length, datePreset }, '[MetaAds] Métricas buscadas com sucesso')
+  const dailyRaw: any[] = dailyResponse.data?.data ?? []
+  const daily: DailyMetric[] = dailyRaw
+    .map((item: any) => {
+      const actions: { action_type: string; value: string }[] = item.actions ?? []
+      const leads = Number(actions.find(a => a.action_type === 'lead')?.value ?? 0)
+      return {
+        date:  item.date_start ?? '',
+        leads,
+        spend: parseFloat((Number(item.spend ?? 0)).toFixed(2)),
+      }
+    })
+    .filter(d => d.date)
+    .sort((a, b) => a.date.localeCompare(b.date))
 
-  return {
-    campaigns,
-    totals,
-    datePreset,
-    generatedAt: new Date().toISOString(),
-  }
+  logger.info(
+    { campaigns: campaigns.length, dailyPoints: daily.length, datePreset },
+    '[MetaAds] Métricas buscadas com sucesso'
+  )
+
+  return { campaigns, totals, daily, datePreset, generatedAt: new Date().toISOString() }
 }
