@@ -18,6 +18,7 @@ import settingsRouter from './settings.js'
 import servicesRouter from './services.js'
 import integrationsRouter from './integrations.js'
 import metaWebhookRouter from './metaWebhook.routes.js'
+import metaAdsRouter from './metaAds.js'
 
 const router = Router()
 
@@ -40,6 +41,7 @@ router.use('/settings', settingsRouter)   // Configurações do usuário (meta M
 router.use('/services', servicesRouter)       // Serviços/produtos + histórico de vendas
 router.use('/integrations', integrationsRouter) // GA4 + Search Console OAuth + métricas
 router.use('/meta', metaWebhookRouter) // Meta Lead Ads webhook (sem auth)
+router.use('/meta', metaAdsRouter)    // Meta Marketing API — ads-metrics (com auth)
 
 // ROTA DE TESTE — scraper manual
 router.get('/scraper/test', async (_req, res) => {

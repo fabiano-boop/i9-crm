@@ -38,6 +38,8 @@ const envSchema = z.object({
   META_PHONE_NUMBER_ID: z.string().default(''),
   META_WABA_ID: z.string().default(''),
   META_WEBHOOK_VERIFY_TOKEN: z.string().default('i9crm-meta-webhook-2026'),
+  META_PAGE_ACCESS_TOKEN: z.string().optional(),
+  AD_ACCOUNT_ID: z.string().optional(),
 })
 
 const parsed = envSchema.safeParse(process.env)
