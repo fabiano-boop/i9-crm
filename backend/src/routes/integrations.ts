@@ -21,6 +21,19 @@ router.get('/ga4/callback', asyncHandler(async (req: Request, res: Response): Pr
     return
   }
 
+  // Fallback: quando GA4_AGENCY_REDIRECT_URI não está configurado, o Google redireciona
+  // o flow de agência para esta rota com state='agency'. Delegamos ao handler correto.
+  if (state === 'agency') {
+    try {
+      await ga4.handleAgencyCallback(code)
+      res.redirect('https://i9-crm-frontend.vercel.app/dashboard?ga4_agency=connected')
+    } catch (err) {
+      logger.error({ err }, 'GA4 callback (agency fallback): falha ao salvar tokens')
+      res.redirect('https://i9-crm-frontend.vercel.app/dashboard?ga4_agency=error')
+    }
+    return
+  }
+
   try {
     await ga4.handleCallback(code, state)
     res.redirect(`${frontendUrl}/clients/${state}?ga4=connected`)
