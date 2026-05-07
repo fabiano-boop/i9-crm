@@ -55,11 +55,14 @@ router.post('/meta-webhook', async (req: Request, res: Response): Promise<void> 
 
         const lead = await prisma.lead.create({
           data: {
-            nome:        nome || 'Lead Meta Ads',
-            telefone:    whatsapp,
-            origem:      'META_ADS' as any,
-            status:      'NOVO' as any,
-            observacoes: `Tipo de negócio: ${tipoNegocio} | Ad ID: ${adId} | Form ID: ${formId}`,
+            name:         nome || 'Lead Meta Ads',
+            businessName: nome || 'Lead Meta Ads',
+            niche:        tipoNegocio,
+            neighborhood: '',
+            whatsapp:     whatsapp,
+            source:       'META_ADS',
+            status:       'NEW',
+            notes:        `Tipo de negócio: ${tipoNegocio} | Ad ID: ${adId} | Form ID: ${formId}`,
           },
         });
 
