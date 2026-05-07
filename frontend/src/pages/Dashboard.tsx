@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { leadsApi, campaignsApi, alertsApi, analyticsApi, settingsApi, type Lead, type Campaign, type OpportunityAlert, type FinancialAnalytics, type DashboardComparison, type SmartAlert } from '../services/api'
 import ScoreBadge from '../components/shared/ScoreBadge'
 import MetricDelta from '../components/shared/MetricDelta'
+import MetaAdsMetrics from '../components/MetaAdsMetrics'
 
 const STAGE_LABELS: Record<string, string> = {
   new: 'Novo', contacted: 'Contatado', replied: 'Respondeu',
@@ -416,6 +417,9 @@ export default function Dashboard() {
           )}
         </div>
       )}
+
+      {/* Meta Ads — Métricas de Campanhas */}
+      <MetaAdsMetrics />
 
       {/* Campanhas recentes */}
       {campaigns.length > 0 && (

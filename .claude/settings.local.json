@@ -138,7 +138,11 @@
       "PowerShell($end = \\(Get-Date\\).AddSeconds\\(300\\); while \\(\\(Get-Date\\) -lt $end\\) { Start-Sleep -Seconds 30; try { $r = Invoke-WebRequest -Uri \"https://i9-crm-production.up.railway.app/api/meta/meta-webhook?hub.mode=subscribe&hub.verify_token=i9crm_meta_leads_2025&hub.challenge=TEST123\" -UseBasicParsing; \"DEPLOY OK - Status: $\\($r.StatusCode\\) | Body: $\\($r.Content\\)\"; break } catch { $code = $_.Exception.Response.StatusCode.value__; if \\($code -ne 404\\) { \"Erro: HTTP $code\"; break }; Write-Host \"$\\(Get-Date -Format 'HH:mm:ss'\\) — ainda buildando...\" } })",
       "Bash(Get-ChildItem -Recurse -Directory)",
       "Bash(Select-Object -ExpandProperty FullName)",
-      "Bash(grep -E \"\\\\.ts$\")"
+      "Bash(grep -E \"\\\\.ts$\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\luizo\\\\OneDrive\\\\Área de Trabalho\\\\_PROJETOS_ATIVOS\\\\i9_crm\\\\frontend\\\\src\" -Directory)",
+      "Bash(Select-Object Name)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\luizo\\\\OneDrive\\\\Área de Trabalho\\\\_PROJETOS_ATIVOS\\\\i9_crm\\\\frontend\\\\src\\\\components\" -Recurse | Where-Object { $_.Extension -in @\\('.tsx', '.ts'\\) } | Select-Object FullName)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\luizo\\\\OneDrive\\\\Área de Trabalho\\\\_PROJETOS_ATIVOS\\\\i9_crm\\\\frontend\\\\src\" -Recurse -File | Where-Object { $_.Extension -in @\\('.ts', '.tsx'\\) } | Measure-Object | Select-Object Count)"
     ]
   }
 }

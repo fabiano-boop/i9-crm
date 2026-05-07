@@ -650,6 +650,45 @@ export const reportsApi = {
 
 // ─── Agent API ────────────────────────────────────────────────────────────────
 
+// ===== META ADS — Marketing API =====
+export interface MetaCampaignMetrics {
+  campaignId: string
+  campaignName: string
+  spend: number
+  impressions: number
+  clicks: number
+  cpc: number
+  cpm: number
+  ctr: number
+  leads: number
+  costPerLead: number
+}
+
+export interface MetaAdsTotals {
+  spend: number
+  impressions: number
+  clicks: number
+  leads: number
+  cpc: number
+  cpm: number
+  ctr: number
+  costPerLead: number
+}
+
+export interface MetaAdsMetricsData {
+  campaigns: MetaCampaignMetrics[]
+  totals: MetaAdsTotals
+  datePreset: string
+  generatedAt: string
+}
+
+export const metaAdsApi = {
+  metrics: (datePreset = 'last_30d') =>
+    api.get<MetaAdsMetricsData>('/meta/ads-metrics', { params: { date_preset: datePreset } }),
+}
+
+// ─── Agent API ────────────────────────────────────────────────────────────────
+
 export const agentApi = {
   status:        ()                                  => api.get<AgentStatus>('/agent/status'),
   toggle:        (enabled: boolean)                  => api.post('/agent/toggle', { enabled }),
