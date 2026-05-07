@@ -34,11 +34,10 @@ router.get('/ga4/callback', asyncHandler(async (req: Request, res: Response): Pr
 router.get('/ga4/agency-callback', asyncHandler(async (req: Request, res: Response): Promise<void> => {
   const code  = req.query['code']  as string | undefined
   const error = req.query['error'] as string | undefined
-  const frontendUrl = env.FRONTEND_URL.split(',')[0].trim()
 
   if (error || !code) {
     logger.warn({ error }, 'GA4 agency callback: erro ou code ausente')
-    res.redirect(`${frontendUrl}/settings?ga4_agency=error`)
+    res.redirect('https://i9-crm-frontend.vercel.app/dashboard?ga4_agency=error')
     return
   }
 
@@ -47,7 +46,7 @@ router.get('/ga4/agency-callback', asyncHandler(async (req: Request, res: Respon
     res.redirect('https://i9-crm-frontend.vercel.app/dashboard?ga4_agency=connected')
   } catch (err) {
     logger.error({ err }, 'GA4 agency callback: falha ao salvar tokens')
-    res.redirect(`${frontendUrl}/settings?ga4_agency=error`)
+    res.redirect('https://i9-crm-frontend.vercel.app/dashboard?ga4_agency=error')
   }
 }))
 
