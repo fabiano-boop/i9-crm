@@ -95,14 +95,7 @@ router.get('/search-console/metrics/:clientId', asyncHandler(async (req: Request
   res.json(metrics)
 }))
 
-// DELETE /api/integrations/ga4/:clientId → desconectar
-router.delete('/ga4/:clientId', asyncHandler(async (req: Request, res: Response): Promise<void> => {
-  const clientId = req.params['clientId'] as string
-  await ga4.disconnect(clientId)
-  res.json({ ok: true })
-}))
-
-// ─── Rotas de Agência ─────────────────────────────────────────────────────────
+// ─── Rotas de Agência (devem vir ANTES do wildcard /ga4/:clientId) ────────────
 
 // GET /api/integrations/ga4/agency-auth → { authUrl }
 router.get('/ga4/agency-auth', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
@@ -112,13 +105,29 @@ router.get('/ga4/agency-auth', asyncHandler(async (_req: Request, res: Response)
 
 // GET /api/integrations/ga4/agency-metrics → AgencyGa4Metrics
 router.get('/ga4/agency-metrics', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
-  const metrics = await ga4.getAgencyMetrics()
-  res.json(metrics)
+  try {
+    const metrics = await ga4.getAgencyMetrics()
+    res.json(metrics)
+  } catch (err: any) {
+    const msg: string = err?.message ?? ''
+    if (msg.includes('não configurado') || msg.includes('não conectado')) {
+      res.status(400).json({ error: msg, code: 'GA4_NOT_CONFIGURED' })
+      return
+    }
+    throw err
+  }
 }))
 
 // DELETE /api/integrations/ga4/agency → desconectar agência
 router.delete('/ga4/agency', asyncHandler(async (_req: Request, res: Response): Promise<void> => {
   await ga4.disconnectAgency()
+  res.json({ ok: true })
+}))
+
+// DELETE /api/integrations/ga4/:clientId → desconectar cliente
+router.delete('/ga4/:clientId', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  const clientId = req.params['clientId'] as string
+  await ga4.disconnect(clientId)
   res.json({ ok: true })
 }))
 
