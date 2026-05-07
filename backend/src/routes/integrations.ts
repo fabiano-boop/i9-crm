@@ -44,7 +44,7 @@ router.get('/ga4/agency-callback', asyncHandler(async (req: Request, res: Respon
 
   try {
     await ga4.handleAgencyCallback(code)
-    res.redirect(`${frontendUrl}/settings?ga4_agency=connected`)
+    res.redirect('https://i9-crm-frontend.vercel.app/dashboard?ga4_agency=connected')
   } catch (err) {
     logger.error({ err }, 'GA4 agency callback: falha ao salvar tokens')
     res.redirect(`${frontendUrl}/settings?ga4_agency=error`)
