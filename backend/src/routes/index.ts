@@ -39,7 +39,7 @@ router.use('/whatsapp', whatsappRouter)   // Status da conexão WhatsApp
 router.use('/settings', settingsRouter)   // Configurações do usuário (meta MRR)
 router.use('/services', servicesRouter)       // Serviços/produtos + histórico de vendas
 router.use('/integrations', integrationsRouter) // GA4 + Search Console OAuth + métricas
-router.use('/leads', metaWebhookRouter) // Meta Lead Ads webhook
+router.use('/meta', metaWebhookRouter) // Meta Lead Ads webhook (sem auth)
 
 // ROTA DE TESTE — scraper manual
 router.get('/scraper/test', async (_req, res) => {
