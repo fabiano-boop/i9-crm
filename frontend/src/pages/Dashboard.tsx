@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { leadsApi, campaignsApi, alertsApi, analyticsApi, settingsApi, type Lead, type Campaign, type OpportunityAlert, type FinancialAnalytics, type DashboardComparison, type SmartAlert } from '../services/api'
 import ScoreBadge from '../components/shared/ScoreBadge'
 import MetricDelta from '../components/shared/MetricDelta'
@@ -14,6 +14,11 @@ const STAGE_ORDER = ['new', 'contacted', 'replied', 'proposal', 'negotiation', '
 
 export default function Dashboard() {
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [ga4Banner, setGa4Banner] = useState<'connected' | 'error' | null>(() => {
+    const v = searchParams.get('ga4_agency')
+    return v === 'connected' || v === 'error' ? v : null
+  })
 
   // Fallback de navegação por tipo de alerta (caso actionUrl venha nulo do backend)
   const ALERT_FALLBACK: Record<string, string> = {
@@ -36,6 +41,14 @@ export default function Dashboard() {
   const [smartAlerts, setSmartAlerts] = useState<SmartAlert[]>([])
   const [mrrGoal, setMrrGoal]         = useState(0)
   const [pipelineMap, setPipelineMap] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    if (ga4Banner) {
+      const p = new URLSearchParams(searchParams)
+      p.delete('ga4_agency')
+      setSearchParams(p, { replace: true })
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     async function load() {
@@ -90,6 +103,23 @@ export default function Dashboard() {
 
   return (
     <div className="p-6" style={{ background: '#061422', minHeight: '100%' }}>
+      {ga4Banner && (
+        <div
+          className="mb-4 flex items-center justify-between rounded-lg px-4 py-3 text-sm font-medium"
+          style={{
+            background: ga4Banner === 'connected' ? '#052e16' : '#1f0a0a',
+            border: `1px solid ${ga4Banner === 'connected' ? '#16a34a' : '#dc2626'}`,
+            color:  ga4Banner === 'connected' ? '#4ade80' : '#f87171',
+          }}
+        >
+          <span>
+            {ga4Banner === 'connected'
+              ? 'Google Analytics 4 da agência conectado com sucesso.'
+              : 'Erro ao conectar Google Analytics 4 da agência. Tente novamente.'}
+          </span>
+          <button onClick={() => setGa4Banner(null)} style={{ marginLeft: 12, opacity: 0.7 }}>✕</button>
+        </div>
+      )}
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div>

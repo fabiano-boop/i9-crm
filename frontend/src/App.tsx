@@ -73,6 +73,7 @@ export default function App() {
           {/* Clientes */}
           <Route path="/clients" element={<ClientList />} />
           <Route path="/clients/new" element={<NewClient />} />
+          <Route path="/clients/agency" element={<Navigate to="/dashboard" replace />} />
           <Route path="/clients/:id" element={<ClientDetail />} />
           <Route path="/clients/:id/edit" element={<ClientEdit />} />
           {/* Intel. de Mercado */}
