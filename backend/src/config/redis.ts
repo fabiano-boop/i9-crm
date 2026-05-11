@@ -10,8 +10,7 @@ export function getRedis(): Redis {
     redisInstance = new Redis(env.REDIS_URL, {
       maxRetriesPerRequest: null,   // obrigatório para BullMQ
       enableReadyCheck: false,       // evita timeout na inicialização
-      lazyConnect: true,
-      enableOfflineQueue: false,
+      tls: env.REDIS_URL.startsWith('rediss://') ? {} : undefined,
       retryStrategy: (times: number) => {
         // backoff exponencial: 100ms → 200ms → 400ms ... até 5s
         return Math.min(100 * Math.pow(2, times - 1), 5000)
@@ -31,7 +30,6 @@ export function getRedis(): Redis {
 export async function isRedisAvailable(): Promise<boolean> {
   try {
     const r = getRedis()
-    await r.connect().catch(() => null)
     const pong = await r.ping().catch(() => null)
     redisAvailable = pong === 'PONG'
   } catch {
