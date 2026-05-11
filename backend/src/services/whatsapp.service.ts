@@ -191,7 +191,7 @@ export async function sendCampaignWhatsApp(campaignId: string): Promise<void> {
       await incrementDailyCounter()
       await prisma.lead.update({
         where: { id: cl.leadId },
-        data: { status: 'CONTACTED', pipelineStage: 'CONTACTED', lastContactAt: new Date() },
+        data: { status: 'CONTACTED', pipelineStage: 'contacted', lastContactAt: new Date() },
       })
       sent++
     } else {
@@ -263,7 +263,7 @@ export async function sendCampaignWABA(campaignId: string): Promise<void> {
     if (ok) {
       await prisma.lead.update({
         where: { id: cl.leadId },
-        data: { status: 'CONTACTED', pipelineStage: 'CONTACTED', lastContactAt: new Date() },
+        data: { status: 'CONTACTED', pipelineStage: 'contacted', lastContactAt: new Date() },
       })
       sent++
     } else {
@@ -434,7 +434,7 @@ export async function processMetaWebhook(body: Record<string, unknown>): Promise
 
         const updates: Promise<unknown>[] = [
           prisma.interaction.create({ data: { leadId: lead.id, type: 'WHATSAPP', channel: 'whatsapp_waba', content, direction: 'IN' } }),
-          prisma.lead.update({ where: { id: lead.id }, data: { status: 'REPLIED', pipelineStage: 'replied', lastContactAt: new Date() } }),
+          prisma.lead.update({ where: { id: lead.id }, data: { lastContactAt: new Date() } }),
         ]
         if (recentCampaignLead) {
           updates.push(
@@ -442,6 +442,14 @@ export async function processMetaWebhook(body: Record<string, unknown>): Promise
           )
         }
         await Promise.all(updates)
+
+        // Mover pipeline para REPLIED quando lead responde (apenas se ainda estava em contacted)
+        if (lead.pipelineStage === 'contacted') {
+          await prisma.lead.update({
+            where: { id: lead.id },
+            data: { pipelineStage: 'replied', status: 'REPLIED' },
+          })
+        }
 
         handleLeadReply(lead.id).catch((err) =>
           logger.warn({ err, leadId: lead.id }, 'Erro ao pausar cadências na resposta (WABA)')

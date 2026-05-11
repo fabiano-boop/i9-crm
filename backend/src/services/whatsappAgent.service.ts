@@ -541,13 +541,26 @@ Analise tudo e retorne APENAS um JSON válido:
     ? `\n[Maya ${new Date().toLocaleDateString('pt-BR')}]: ${parsed.newLeadInfo}`
     : ''
 
+  const stageMap: Record<string, { pipelineStage: string; status: string }> = {
+    qualifying:         { pipelineStage: 'qualifying',   status: 'REPLIED' },
+    presenting:         { pipelineStage: 'presenting',   status: 'PROPOSAL' },
+    handling_objection: { pipelineStage: 'negotiation',  status: 'NEGOTIATION' },
+    scheduling:         { pipelineStage: 'scheduling',   status: 'NEGOTIATION' },
+    human_needed:       { pipelineStage: 'human_needed', status: 'REPLIED' },
+  }
+  const mappedStage = stageMap[parsed.stage]
+
   await prisma.$transaction([
     prisma.interaction.create({
       data: { leadId, type: 'WHATSAPP', channel: 'whatsapp_agent', content: parsed.message, direction: 'OUT' },
     }),
     prisma.lead.update({
       where: { id: leadId },
-      data: { lastContactAt: new Date(), ...(noteAppend ? { notes: (lead.notes ?? '') + noteAppend } : {}) },
+      data: {
+        lastContactAt: new Date(),
+        ...(noteAppend ? { notes: (lead.notes ?? '') + noteAppend } : {}),
+        ...(mappedStage ? { pipelineStage: mappedStage.pipelineStage, status: mappedStage.status as import('@prisma/client').LeadStatus } : {}),
+      },
     }),
   ])
 
