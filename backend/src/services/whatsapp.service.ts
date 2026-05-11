@@ -29,13 +29,13 @@ function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? '')
 }
 
-// Delay aleatório entre 90-180s (anti-ban — aumentado após restrição)
+// Delay aleatório entre 3-5s (anti-ban)
 function humanDelay(): Promise<void> {
-  const ms = 90_000 + Math.random() * 90_000
+  const ms = 3_000 + Math.random() * 2_000
   return new Promise((r) => setTimeout(r, ms))
 }
 
-// Limite diário Whapi pelo dia de warm-up (hard cap reduzido para 15)
+// Limite diário Whapi pelo dia de warm-up (hard cap: 30)
 function getDailyLimit(warmupDay: number): number {
   if (warmupDay <= 7) return 20
   if (warmupDay <= 30) return 50
@@ -50,8 +50,8 @@ async function getAntiBanStatus(): Promise<{ sentToday: number; limit: number; w
     prisma.whatsAppConfig.upsert({ where: { id: 'default' }, create: {}, update: {} }),
   ])
   const warmupDay = Math.max(1, Math.floor((Date.now() - config.warmupStartDate.getTime()) / 86_400_000) + 1)
-  // Hard cap reduzido para 15/dia após restrição
-  return { sentToday: stats?.sent ?? 0, limit: Math.min(15, getDailyLimit(warmupDay)), warmupDay }
+  // Hard cap: 30 msgs/dia (seguro após período de restrição)
+  return { sentToday: stats?.sent ?? 0, limit: Math.min(30, getDailyLimit(warmupDay)), warmupDay }
 }
 
 async function incrementDailyCounter(): Promise<void> {
