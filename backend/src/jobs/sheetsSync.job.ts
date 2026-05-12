@@ -48,7 +48,7 @@ export async function startSheetsWorker(): Promise<void> {
         logger.info({ jobId: job.id }, 'Iniciando sync Sheets via job')
         return syncFromSheets()
       },
-      { connection: getRedis() }
+      { connection: getRedis(), stalledInterval: 60_000 }
     )
     worker.on('failed', (job, err) => logger.error({ jobId: job?.id, err }, 'Sync job falhou'))
     logger.info('Worker sheets-sync iniciado')

@@ -74,7 +74,7 @@ export async function startWeeklyReportWorkers(): Promise<void> {
         logger.info(result, 'weekly-report-generate job concluído')
         return result
       },
-      { connection: getRedis() },
+      { connection: getRedis(), stalledInterval: 60_000 },
     )
       .on('failed', (job, err) => logger.error({ jobId: job?.id, err }, 'weekly-report-generate job falhou'))
       .on('error', (err) => logger.warn({ err }, 'weekly-report-generate worker error'))
@@ -86,7 +86,7 @@ export async function startWeeklyReportWorkers(): Promise<void> {
         logger.info(result, 'weekly-report-send job concluído')
         return result
       },
-      { connection: getRedis() },
+      { connection: getRedis(), stalledInterval: 60_000 },
     )
       .on('failed', (job, err) => logger.error({ jobId: job?.id, err }, 'weekly-report-send job falhou'))
       .on('error', (err) => logger.warn({ err }, 'weekly-report-send worker error'))

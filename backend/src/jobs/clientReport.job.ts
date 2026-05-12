@@ -159,6 +159,7 @@ export async function startClientReportWorkers(): Promise<void> {
       {
         connection: getRedis(),
         concurrency: 2, // Puppeteer limita paralelismo
+        stalledInterval: 60_000,
         limiter: {
           max: 5,
           duration: 60_000, // máx 5 jobs/min

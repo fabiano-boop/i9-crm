@@ -111,7 +111,7 @@ export async function startAlertWorkers(): Promise<void> {
         logger.info({ checked: recentLeads.length, created }, 'alert-check-engagement concluído')
         return { checked: recentLeads.length, created }
       },
-      { connection: getRedis() },
+      { connection: getRedis(), stalledInterval: 60_000 },
     )
       .on('failed', (job, err) => logger.error({ jobId: job?.id, err }, 'alert-check-engagement job falhou'))
       .on('error', (err) => logger.warn({ err }, 'alert-check-engagement worker error'))
@@ -126,7 +126,7 @@ export async function startAlertWorkers(): Promise<void> {
         logger.info({ coolingCount, noContactCount }, 'alert-check-cooling concluído')
         return { coolingCount, noContactCount }
       },
-      { connection: getRedis() },
+      { connection: getRedis(), stalledInterval: 60_000 },
     )
       .on('failed', (job, err) => logger.error({ jobId: job?.id, err }, 'alert-check-cooling job falhou'))
       .on('error', (err) => logger.warn({ err }, 'alert-check-cooling worker error'))
@@ -137,7 +137,7 @@ export async function startAlertWorkers(): Promise<void> {
         await generateMorningDigest()
         logger.info('morning-digest job concluído')
       },
-      { connection: getRedis() },
+      { connection: getRedis(), stalledInterval: 60_000 },
     )
       .on('failed', (job, err) => logger.error({ jobId: job?.id, err }, 'morning-digest job falhou'))
       .on('error', (err) => logger.warn({ err }, 'morning-digest worker error'))

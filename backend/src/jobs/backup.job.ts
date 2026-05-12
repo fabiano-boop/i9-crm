@@ -45,7 +45,7 @@ export async function startBackupWorker(): Promise<void> {
         logger.info({ jobId: job.id }, 'Executando backup automático')
         return runBackup('auto')
       },
-      { connection: getRedis() }
+      { connection: getRedis(), stalledInterval: 60_000 }
     )
 
     worker.on('failed', async (_job, err) => {

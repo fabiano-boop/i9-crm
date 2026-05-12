@@ -81,7 +81,7 @@ export async function startInvoiceWorkers(): Promise<void> {
         logger.warn({ name: job.name }, 'invoice-queue: job desconhecido')
         return null
       },
-      { connection: getRedis() },
+      { connection: getRedis(), stalledInterval: 60_000 },
     )
       .on('failed', (job, err) => logger.error({ jobId: job?.id, name: job?.name, err }, 'invoice-queue job falhou'))
       .on('error', (err) => logger.warn({ err }, 'invoice-queue worker error'))

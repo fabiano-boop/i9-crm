@@ -66,6 +66,7 @@ export async function startCadenceWorker(): Promise<void> {
       },
       {
         connection: getRedis(),
+        stalledInterval: 60_000,
         limiter: { max: 30, duration: 60_000 }, // max 30 steps/min
       }
     )
