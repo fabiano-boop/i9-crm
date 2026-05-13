@@ -142,7 +142,18 @@
       "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\luizo\\\\OneDrive\\\\Área de Trabalho\\\\_PROJETOS_ATIVOS\\\\i9_crm\\\\frontend\\\\src\" -Directory)",
       "Bash(Select-Object Name)",
       "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\luizo\\\\OneDrive\\\\Área de Trabalho\\\\_PROJETOS_ATIVOS\\\\i9_crm\\\\frontend\\\\src\\\\components\" -Recurse | Where-Object { $_.Extension -in @\\('.tsx', '.ts'\\) } | Select-Object FullName)",
-      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\luizo\\\\OneDrive\\\\Área de Trabalho\\\\_PROJETOS_ATIVOS\\\\i9_crm\\\\frontend\\\\src\" -Recurse -File | Where-Object { $_.Extension -in @\\('.ts', '.tsx'\\) } | Measure-Object | Select-Object Count)"
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\luizo\\\\OneDrive\\\\Área de Trabalho\\\\_PROJETOS_ATIVOS\\\\i9_crm\\\\frontend\\\\src\" -Recurse -File | Where-Object { $_.Extension -in @\\('.ts', '.tsx'\\) } | Measure-Object | Select-Object Count)",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\luizo\\\\OneDrive\\\\Área de Trabalho\\\\_PROJETOS_ATIVOS\\\\i9_crm\" | Select-Object Name, @{Name=\"Type\";Expression={if\\($_.PSIsContainer\\){\"DIR\"}else{\"FILE\"}}} | Format-Table -AutoSize)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\luizo\\\\OneDrive\\\\Área de Trabalho\\\\_PROJETOS_ATIVOS\\\\i9_crm\" -Force)",
+      "Bash(Select-Object Mode, Name)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/nodejs:/c/Users/luizo/AppData/Roaming/npm\")",
+      "Bash(npx tsx *)",
+      "Bash(cmd /c \"cd /d \\\\\"c:\\\\Users\\\\luizo\\\\OneDrive\\\\Área de Trabalho\\\\_PROJETOS_ATIVOS\\\\i9_crm\\\\backend\\\\\" && npx tsx src/scripts/test-routing.ts\")",
+      "Bash(/c/Users/luizo/AppData/Roaming/npm/npx tsx *)",
+      "Read(//c/Program Files/nodejs//**)",
+      "Bash(\"/c/Program Files/nodejs/npx.cmd\" --version)",
+      "Bash(\"/c/Program Files/nodejs/npx\" tsx src/scripts/test-routing.ts)",
+      "Bash(export PATH=\"/c/Program Files/nodejs:$PATH\")"
     ]
   }
 }
