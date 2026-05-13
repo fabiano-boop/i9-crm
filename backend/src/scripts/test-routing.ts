@@ -25,12 +25,12 @@ import axios from 'axios'
 const _originalPost = axios.post.bind(axios)
 
 let capturedUrl: string | null = null
-let capturedPayload: unknown = null
+let _capturedPayload: unknown = null
 
 // @ts-ignore — sobrescreve axios.post globalmente para este script
 axios.post = async (url: string, data?: unknown) => {
   capturedUrl = url
-  capturedPayload = data
+  _capturedPayload = data
   console.log(`\n[INTERCEPTADO] axios.post chamado com:`)
   console.log(`  URL:     ${url}`)
   console.log(`  Payload: ${JSON.stringify(data, null, 2)}`)
