@@ -22,7 +22,7 @@ process.env.TRACKING_SECRET = 'tracking-secret-change-me-ok!!'
 // ─── Mock do axios para interceptar chamadas sem enviar nada real ─────────────
 
 import axios from 'axios'
-const originalPost = axios.post.bind(axios)
+const _originalPost = axios.post.bind(axios)
 
 let capturedUrl: string | null = null
 let capturedPayload: unknown = null
