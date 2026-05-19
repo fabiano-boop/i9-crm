@@ -446,7 +446,7 @@ export async function processMessage(
   }
 
   // DEBUG TEMPORÁRIO — remover após validação
-  logger.info({ leadId, incomingMessage, agentEnabled: _agentEnabled, isHumanMode: humanModeLeads.has(leadId) }, '[DEBUG] processMessage: início')
+  logger.info(`[DEBUG] processMessage INICIADO leadId=${leadId} msg=${incomingMessage}`)
 
   // Bloqueia leads que foram assumidos por humano
   if (humanModeLeads.has(leadId)) {
@@ -517,7 +517,7 @@ Analise tudo e retorne APENAS um JSON válido:
   const systemWithSegment = `${MAYA_SYSTEM}\n\n${segmentRule}`
 
   // DEBUG TEMPORÁRIO — remover após validação
-  logger.info({ leadId, segment, currentStage, historyLength: history.length, forceEscalation }, '[DEBUG] processMessage: chamando Claude/Maya')
+  logger.info(`[DEBUG] processMessage chamando Claude/Maya leadId=${leadId} stage=${currentStage}`)
 
   const client = getClient()
   const claudeResponse = await client.messages.create({
@@ -583,7 +583,7 @@ Analise tudo e retorne APENAS um JSON válido:
   // 7. Enviar mensagem
   const phone = lead.whatsapp ?? lead.phone ?? ''
   // DEBUG TEMPORÁRIO — remover após validação
-  logger.info({ leadId, phone, parsedMessage: parsed.message, intent: parsed.intent, stage: parsed.stage, shouldHandoff: parsed.shouldHandoff }, '[DEBUG] processMessage: chamando sendWhatsAppReply')
+  logger.info(`[DEBUG] processMessage chamando sendWhatsAppReply leadId=${leadId} phone=${phone}`)
   const sent = phone ? await sendWhatsAppReply(phone, parsed.message) : false
   if (!sent && phone) logger.warn({ leadId, phone }, 'Agente: mensagem não enviada')
 
