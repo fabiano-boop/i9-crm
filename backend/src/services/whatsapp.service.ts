@@ -439,7 +439,12 @@ export async function processMetaWebhook(body: Record<string, unknown>): Promise
 
       for (const msg of messages) {
         const phone = ((msg['from'] as string) ?? '').replace(/^55/, '')
-        const content = (msg['text'] as Record<string, unknown> | undefined)?.['body'] as string ?? ''
+        const interactive = msg['interactive'] as Record<string, unknown> | undefined
+        const content = msg['type'] === 'interactive'
+          ? ((interactive?.['button_reply'] as Record<string, unknown> | undefined)?.['title'] as string)
+            ?? ((interactive?.['list_reply'] as Record<string, unknown> | undefined)?.['title'] as string)
+            ?? ''
+          : (msg['text'] as Record<string, unknown> | undefined)?.['body'] as string ?? ''
         if (!phone) continue
 
         logger.info({ phone, content }, 'Mensagem recebida via Meta WABA')
