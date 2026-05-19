@@ -454,6 +454,9 @@ export async function processMetaWebhook(body: Record<string, unknown>): Promise
         // DEBUG TEMPORÁRIO — remover após validação
         logger.info({ phoneNormalized: phone, leadFound: lead ? { id: lead.id, name: lead.name, phone: lead.phone, whatsapp: lead.whatsapp } : null }, '[DEBUG] processMetaWebhook: resultado do findFirst')
 
+        // DEBUG TEMPORÁRIO — remover após validação
+        logger.info({ leadId: lead?.id ?? null }, '[DEBUG] após findFirst — verificando se lead existe')
+
         if (!lead) {
           logger.warn({ phone }, 'Webhook Meta: lead não encontrado')
           continue
@@ -483,9 +486,15 @@ export async function processMetaWebhook(body: Record<string, unknown>): Promise
           })
         }
 
+        // DEBUG TEMPORÁRIO — remover após validação
+        logger.info({ leadId: lead.id }, '[DEBUG] antes de handleLeadReply')
+
         handleLeadReply(lead.id).catch((err) =>
           logger.warn({ err, leadId: lead.id }, 'Erro ao pausar cadências na resposta (WABA)')
         )
+
+        // DEBUG TEMPORÁRIO — remover após validação
+        logger.info({ leadId: lead.id, agentEnabled: env.WHATSAPP_AGENT_ENABLED, contentTrimmed: content.trim() }, '[DEBUG] antes de processMessage')
 
         // Maya responde via Whapi (canal de conversa)
         if (env.WHATSAPP_AGENT_ENABLED && content.trim()) {

@@ -60,7 +60,11 @@ router.post('/meta', async (req: Request, res: Response): Promise<void> => {
   res.status(200).json({ received: true })
 
   processMetaWebhook(req.body as Record<string, unknown>).catch((err) => {
-    logger.error({ err }, 'Erro ao processar webhook Meta WABA')
+    // DEBUG TEMPORÁRIO — remover após validação
+    logger.error({
+      errMessage: err instanceof Error ? err.message : err,
+      errStack: err instanceof Error ? err.stack : undefined,
+    }, '[DEBUG] Erro completo ao processar webhook Meta WABA')
   })
 })
 
