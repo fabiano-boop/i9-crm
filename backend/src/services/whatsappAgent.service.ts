@@ -418,7 +418,15 @@ async function sendWhatsAppReply(phone: string, message: string): Promise<boolea
       )
       return true
     } catch (err) {
-      logger.warn({ phone: to, attempt, err: err instanceof Error ? err.message : err }, 'Agente: falha ao enviar')
+      // DEBUG TEMPORÁRIO — remover após validação
+      logger.error({
+        phone: to,
+        attempt,
+        errMessage: err instanceof Error ? err.message : err,
+        errStack: err instanceof Error ? err.stack : undefined,
+        errResponse: (err as any)?.response?.data ?? undefined,
+        errStatus: (err as any)?.response?.status ?? undefined,
+      }, '[DEBUG] sendWhatsAppReply: erro completo')
       if (attempt < 3) await new Promise((r) => setTimeout(r, 2000 * attempt))
     }
   }
@@ -434,6 +442,9 @@ export async function processMessage(
   if (!_agentEnabled) {
     throw new Error('Agente Maya está desativado')
   }
+
+  // DEBUG TEMPORÁRIO — remover após validação
+  logger.info({ leadId, incomingMessage, agentEnabled: _agentEnabled, isHumanMode: humanModeLeads.has(leadId) }, '[DEBUG] processMessage: início')
 
   // Bloqueia leads que foram assumidos por humano
   if (humanModeLeads.has(leadId)) {
@@ -503,6 +514,9 @@ Analise tudo e retorne APENAS um JSON válido:
   const segmentRule = SEGMENT_RULES[segment] ?? SEGMENT_RULES.default
   const systemWithSegment = `${MAYA_SYSTEM}\n\n${segmentRule}`
 
+  // DEBUG TEMPORÁRIO — remover após validação
+  logger.info({ leadId, segment, currentStage, historyLength: history.length, forceEscalation }, '[DEBUG] processMessage: chamando Claude/Maya')
+
   const client = getClient()
   const claudeResponse = await client.messages.create({
     model: 'claude-sonnet-4-6',
@@ -566,6 +580,8 @@ Analise tudo e retorne APENAS um JSON válido:
 
   // 7. Enviar mensagem
   const phone = lead.whatsapp ?? lead.phone ?? ''
+  // DEBUG TEMPORÁRIO — remover após validação
+  logger.info({ leadId, phone, parsedMessage: parsed.message, intent: parsed.intent, stage: parsed.stage, shouldHandoff: parsed.shouldHandoff }, '[DEBUG] processMessage: chamando sendWhatsAppReply')
   const sent = phone ? await sendWhatsAppReply(phone, parsed.message) : false
   if (!sent && phone) logger.warn({ leadId, phone }, 'Agente: mensagem não enviada')
 
