@@ -441,11 +441,14 @@ export async function processMetaWebhook(body: Record<string, unknown>): Promise
         const phone = ((msg['from'] as string) ?? '').replace(/^55/, '')
         logger.info(`[DEBUG] msg RAW type=${msg['type']} keys=${Object.keys(msg as object).join(',')} full=${JSON.stringify(msg)}`)
         const interactive = msg['interactive'] as Record<string, unknown> | undefined
+        const button = msg['button'] as Record<string, unknown> | undefined
         const content = msg['type'] === 'interactive'
-          ? ((interactive?.['button_reply'] as Record<string, unknown> | undefined)?.['title'] as string)
-            ?? ((interactive?.['list_reply'] as Record<string, unknown> | undefined)?.['title'] as string)
+          ? (interactive?.['button_reply'] as Record<string, unknown>)?.['title'] as string
+            ?? (interactive?.['list_reply'] as Record<string, unknown>)?.['title'] as string
             ?? ''
-          : (msg['text'] as Record<string, unknown> | undefined)?.['body'] as string ?? ''
+          : msg['type'] === 'button'
+            ? button?.['text'] as string ?? button?.['payload'] as string ?? ''
+            : (msg['text'] as Record<string, unknown> | undefined)?.['body'] as string ?? ''
         if (!phone) continue
 
         logger.info(`Mensagem recebida via Meta WABA phone=${phone} content=${content}`)
