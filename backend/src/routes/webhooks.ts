@@ -60,11 +60,7 @@ router.post('/meta', async (req: Request, res: Response): Promise<void> => {
   res.status(200).json({ received: true })
 
   processMetaWebhook(req.body as Record<string, unknown>).catch((err) => {
-    logger.error('[DEBUG] ERRO CRÍTICO processMetaWebhook', {
-      message: err?.message,
-      stack: err?.stack,
-      full: JSON.stringify(err),
-    })
+    logger.error(`[DEBUG] ERRO CRÍTICO processMetaWebhook message=${err?.message} stack=${err?.stack} full=${JSON.stringify(err)}`)
   })
 })
 
