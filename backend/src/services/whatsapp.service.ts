@@ -439,6 +439,7 @@ export async function processMetaWebhook(body: Record<string, unknown>): Promise
 
       for (const msg of messages) {
         const phone = ((msg['from'] as string) ?? '').replace(/^55/, '')
+        logger.info(`[DEBUG] msg RAW type=${msg['type']} keys=${Object.keys(msg as object).join(',')} full=${JSON.stringify(msg)}`)
         const interactive = msg['interactive'] as Record<string, unknown> | undefined
         const content = msg['type'] === 'interactive'
           ? ((interactive?.['button_reply'] as Record<string, unknown> | undefined)?.['title'] as string)
