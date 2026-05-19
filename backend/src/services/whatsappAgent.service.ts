@@ -439,7 +439,7 @@ export async function processMessage(
   leadId: string,
   incomingMessage: string,
 ): Promise<AgentResponse> {
-  logger.info('[DEBUG] processMessage INICIADO', { leadId, incomingMessage })
+  logger.info(`[DEBUG] processMessage INICIADO leadId=${leadId} msg=${incomingMessage}`)
 
   if (!_agentEnabled) {
     throw new Error('Agente Maya está desativado')
