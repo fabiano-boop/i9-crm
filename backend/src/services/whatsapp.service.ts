@@ -240,18 +240,44 @@ export async function sendCampaignWABA(campaignId: string): Promise<void> {
       continue
     }
 
-    const vars: Record<string, string> = {
-      nome: lead.name,
-      negocio: lead.businessName,
-      bairro: lead.neighborhood,
-      nicho: lead.niche,
-      angulo: lead.whatsappAngle ?? '',
+    const to = normalizePhone(phone)
+    let ok = false
+    try {
+      await metaHttp.post('/messages', {
+        messaging_product: 'whatsapp',
+        to,
+        type: 'template',
+        template: {
+          name: 'prospeccao_marketing_digital',
+          language: { code: 'pt_BR' },
+          components: [
+            {
+              type: 'header',
+              parameters: [
+                {
+                  type: 'image',
+                  image: { id: '1682227152965589' },
+                },
+              ],
+            },
+            {
+              type: 'body',
+              parameters: [
+                {
+                  type: 'text',
+                  parameter_name: 'nome',
+                  text: lead.name,
+                },
+              ],
+            },
+          ],
+        },
+      })
+      ok = true
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      logger.warn({ phone: to, err: msg }, 'Falha ao enviar template WABA')
     }
-
-    let message = interpolate(campaign.bodyText, vars)
-    message = message.replace(/(https?:\/\/[^\s]+)/g, (url) => createTrackingUrl(cl.id, url))
-
-    const ok = await sendTextWABA(phone, message)
 
     await prisma.campaignLead.update({
       where: { id: cl.id },
