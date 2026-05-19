@@ -447,7 +447,7 @@ export async function processMetaWebhook(body: Record<string, unknown>): Promise
           : (msg['text'] as Record<string, unknown> | undefined)?.['body'] as string ?? ''
         if (!phone) continue
 
-        logger.info({ phone, content }, 'Mensagem recebida via Meta WABA')
+        logger.info(`Mensagem recebida via Meta WABA phone=${phone} content=${content}`)
 
         // DEBUG TEMPORÁRIO — remover após validação
         logger.info({ phoneRaw: msg['from'], phoneNormalized: phone }, '[DEBUG] processMetaWebhook: número extraído do webhook')
