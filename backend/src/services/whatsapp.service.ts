@@ -444,9 +444,15 @@ export async function processMetaWebhook(body: Record<string, unknown>): Promise
 
         logger.info({ phone, content }, 'Mensagem recebida via Meta WABA')
 
+        // DEBUG TEMPORÁRIO — remover após validação
+        logger.info({ phoneRaw: msg['from'], phoneNormalized: phone }, '[DEBUG] processMetaWebhook: número extraído do webhook')
+
         const lead = await prisma.lead.findFirst({
           where: { OR: [{ phone: { contains: phone } }, { whatsapp: { contains: phone } }] },
         })
+
+        // DEBUG TEMPORÁRIO — remover após validação
+        logger.info({ phoneNormalized: phone, leadFound: lead ? { id: lead.id, name: lead.name, phone: lead.phone, whatsapp: lead.whatsapp } : null }, '[DEBUG] processMetaWebhook: resultado do findFirst')
 
         if (!lead) {
           logger.warn({ phone }, 'Webhook Meta: lead não encontrado')
